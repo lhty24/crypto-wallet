@@ -1,0 +1,33 @@
+[package]
+name = "crypto-wallet-backend"
+version = "0.1.0"
+edition = "2021"
+authors = ["Crypto Wallet Developer"]
+license = "MIT"
+description = "Multi-chain cryptocurrency wallet backend with HD wallet support"
+
+# Security-focused compilation profiles
+[profile.release]
+# Link-time optimization - optimizes across all crates for better performance and smaller binaries
+lto = true
+# Single codegen unit for better optimization (slower compile, better runtime performance)
+codegen-units = 1
+# Abort on panic instead of unwinding - smaller binary, faster execution
+panic = "abort"
+# Remove debug symbols in release for smaller binary
+strip = true
+# Optimize for performance
+opt-level = 3
+
+[profile.dev]
+# Keep debug info for development and testing
+debug = true
+# Faster compilation for development
+opt-level = 0
+
+# Dependencies will be added in Task 2
+[dependencies]
+
+# Development dependencies for testing
+[dev-dependencies]
+tokio-test = "0.4"
