@@ -1,0 +1,315 @@
+# =============================================================================
+# Multi-Chain Crypto Wallet - .gitignore
+# =============================================================================
+# This file prevents sensitive data, build artifacts, and unnecessary files
+# from being committed to version control.
+
+# =============================================================================
+# SECURITY-CRITICAL: NEVER COMMIT THESE FILES
+# =============================================================================
+
+# Private Keys and Wallets (CRITICAL - Never commit these!)
+*.wallet
+*.key
+*.pem
+*.p12
+*.pfx
+*private_key*
+*private-key*
+*privatekey*
+wallet.json
+keystore/
+keys/
+wallets/
+.wallet/
+
+# Mnemonic Phrases and Seeds (CRITICAL - Never commit these!)
+*mnemonic*
+*seed*
+*recovery*
+*backup*
+seed.txt
+mnemonic.txt
+recovery.txt
+backup.txt
+
+# Environment Files with Secrets
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.staging
+*.env
+
+# Configuration files that might contain secrets
+config.json
+secrets.json
+credentials.json
+auth.json
+
+# =============================================================================
+# RUST BUILD ARTIFACTS
+# =============================================================================
+
+# Cargo build outputs
+/target/
+/backend/target/
+/frontend/target/
+**/target/
+
+# Cargo lock file (include for applications, exclude for libraries)
+# Since this is a wallet application (not a library), we'll keep Cargo.lock
+# Cargo.lock
+
+# Rust compilation cache
+**/*.rs.bk
+*.pdb
+
+# =============================================================================
+# NODE.JS / FRONTEND (Future)
+# =============================================================================
+
+# Node modules
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Next.js build output (when we add frontend)
+.next/
+out/
+.vercel/
+
+# Environment variables
+.env*.local
+
+# Package manager lock files (keep for reproducible builds)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# =============================================================================
+# DEVELOPMENT TOOLS
+# =============================================================================
+
+# IDE and Editor files
+.vscode/settings.json
+.vscode/launch.json
+.vscode/extensions.json
+.vscode/c_cpp_properties.json
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# Log files
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# =============================================================================
+# TESTING AND DEVELOPMENT DATA
+# =============================================================================
+
+# Test databases and data
+test.db
+test.sqlite
+*.db-journal
+db.sqlite*
+
+# Coverage reports
+coverage/
+*.lcov
+.nyc_output/
+
+# Benchmark results
+benchmark-results/
+*.bench
+
+# =============================================================================
+# OPERATING SYSTEM FILES
+# =============================================================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.fseventsd
+.DocumentRevisions-V100
+.TemporaryItems
+.apdisk
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# =============================================================================
+# DOCUMENTATION AND GENERATED FILES
+# =============================================================================
+
+# Documentation build outputs (keep source .md files)
+/target/doc/
+docs/build/
+site/
+
+# Generated documentation
+book/
+mdbook/
+target/doc/
+
+# =============================================================================
+# BLOCKCHAIN AND CRYPTO SPECIFIC
+# =============================================================================
+
+# Local blockchain data
+blockchain/
+chain-data/
+geth/
+.ethereum/
+
+# Local testnet data
+testnet/
+devnet/
+localnet/
+
+# RPC and node data
+node_modules/
+.ganache/
+ganache-cli/
+
+# Transaction receipts and local cache
+receipts/
+.cache/
+cache/
+
+# =============================================================================
+# SECURITY TOOLS AND AUDITS
+# =============================================================================
+
+# Security audit reports (may contain sensitive info)
+audit-reports/
+security-reports/
+*.audit
+vulnerability-report.*
+
+# Static analysis outputs
+.clippy_cache/
+target/clippy/
+
+# =============================================================================
+# BACKUP AND ARCHIVE FILES
+# =============================================================================
+
+# Archives
+*.zip
+*.tar.gz
+*.tar
+*.rar
+*.7z
+
+# Backup files
+*.bak
+*.backup
+*.old
+*_backup
+*_old
+
+# =============================================================================
+# EXAMPLE AND IGNORE PATTERNS FOR FUTURE USE
+# =============================================================================
+
+# Example configurations (uncomment if created)
+# config.example.json
+# .env.example
+
+# Future integration files (uncomment if added)
+# docker-compose.override.yml
+# .dockerignore
+
+# Database files (uncomment if using local DBs)
+# *.sqlite
+# *.sqlite3
+# *.db
+
+# =============================================================================
+# WHITELIST IMPORTANT FILES (Override above patterns)
+# =============================================================================
+
+# Force include important files that might be caught by patterns above
+# Use ! to override exclusions
+
+# Include example/template files
+!.env.example
+!config.example.json
+!wallet.example.json
+
+# Include documentation
+!README.md
+!SECURITY.md
+!CONTRIBUTING.md
+!*.md
+
+# Include important configuration files
+!Cargo.toml
+!package.json
+!tsconfig.json
+
+# Include implementation logs
+!implementation-logs/
+!implementation-logs/*.md
+
+# =============================================================================
+# NOTES FOR DEVELOPERS
+# =============================================================================
+
+# This .gitignore is designed specifically for a crypto wallet project.
+# Key security considerations:
+# 1. Never commit private keys, mnemonics, or seeds
+# 2. Never commit environment files with API keys or secrets
+# 3. Be extra cautious with any file that might contain sensitive data
+# 4. Review all commits to ensure no secrets are accidentally included
+# 5. Use tools like git-secrets or gitleaks for additional protection
+#
+# For sensitive development:
+# 1. Use separate .env files for different environments
+# 2. Store test mnemonics/keys separately from production
+# 3. Use hardware wallets for any real funds during development
+# 4. Regularly audit dependencies for security vulnerabilities
+#
+# Remember: Once committed to git, files can be difficult to completely remove
+# from git history. Prevention is better than remediation.
