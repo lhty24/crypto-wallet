@@ -15,3 +15,11 @@ pub use mnemonic::{
     generate_test_mnemonic,
     generate_entropy,
 };
+
+pub use hd_wallet::{
+    HDWallet,
+    Account,
+    Chain,
+    HDWalletError,
+    derivation,
+};
