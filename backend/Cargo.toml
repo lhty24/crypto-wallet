@@ -72,6 +72,12 @@ tokio = { version = "1.0", features = ["full"] }
 anyhow = "1.0"     # Simple error handling with context
 thiserror = "1.0"  # Custom error types
 
+# === Memory Security ===
+# Zero sensitive data when no longer needed
+zeroize = { version = "1.7", features = ["derive"] }
+
 # Development dependencies for testing
 [dev-dependencies]
 tokio-test = "0.4"
+tempfile = "3.8"    # For temporary file testing
+chrono = "0.4"      # For timestamp handling in tests
