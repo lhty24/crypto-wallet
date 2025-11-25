@@ -1,0 +1,83 @@
+[package]
+name = "crypto-wallet-backend"
+version = "0.1.0"
+edition = "2021"
+authors = ["Crypto Wallet Developer"]
+license = "MIT"
+description = "Multi-chain cryptocurrency wallet backend with HD wallet support"
+
+# Security-focused compilation profiles
+[profile.release]
+# Link-time optimization - optimizes across all crates for better performance and smaller binaries
+lto = true
+# Single codegen unit for better optimization (slower compile, better runtime performance)
+codegen-units = 1
+# Abort on panic instead of unwinding - smaller binary, faster execution
+panic = "abort"
+# Remove debug symbols in release for smaller binary
+strip = true
+# Optimize for performance
+opt-level = 3
+
+[profile.dev]
+# Keep debug info for development and testing
+debug = true
+# Faster compilation for development
+opt-level = 0
+
+# Core cryptographic dependencies
+[dependencies]
+# === BIP39 Mnemonic Phrases ===
+# Industry standard for wallet recovery phrases (12-24 words)
+bip39 = "2.0"
+
+# === HD Wallet and Key Derivation ===  
+# Bitcoin library provides BIP32/BIP44 hierarchical deterministic wallets
+# Even for multi-chain wallets, we use Bitcoin's key derivation standards
+bitcoin = { version = "0.31", features = ["serde", "rand"] }
+
+# === Elliptic Curve Cryptography ===
+# secp256k1 is used by Ethereum, Bitcoin, and many other blockchains for signatures
+secp256k1 = { version = "0.28", features = ["rand", "recovery", "global-context"] }
+
+# === Solana Cryptography ===
+# Solana uses Ed25519 curve instead of secp256k1
+ed25519-dalek = { version = "2.0", features = ["rand_core"] }
+
+# === Encryption for Key Storage ===
+# AES-256-GCM for encrypting private keys at rest
+aes-gcm = "0.10"
+# Argon2 for deriving encryption keys from passwords (prevents rainbow table attacks)
+argon2 = "0.5"
+
+# === Secure Random Number Generation ===
+# Cryptographically secure random numbers for key generation
+rand = { version = "0.8", features = ["std_rng"] }
+
+# === Utilities ===
+# Convert between hex, binary, and other formats
+hex = "0.4" 
+# Generate unique identifiers for wallets/accounts
+uuid = { version = "1.6", features = ["v4", "serde"] }
+# Serialization/deserialization for data storage
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# === Async Runtime ===
+# Required for future API endpoints and async operations
+tokio = { version = "1.0", features = ["full"] }
+
+# === Error Handling ===
+# Professional error handling for crypto operations
+anyhow = "1.0"     # Simple error handling with context
+thiserror = "1.0"  # Custom error types
+
+# === Memory Security ===
+# Zero sensitive data when no longer needed
+zeroize = { version = "1.7", features = ["derive"] }
+
+# Development dependencies for testing
+[dev-dependencies]
+tokio-test = "0.4"
+tempfile = "3.8"    # For temporary file testing
+chrono = "0.4"      # For timestamp handling in tests
