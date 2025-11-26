@@ -421,11 +421,13 @@ impl EncryptedKeystore {
 
 **Frontend Tasks**:
 
-- [ ] Initialize Next.js project with TypeScript
-- [ ] Set up Tailwind CSS and basic UI framework
-- [ ] Install Viem and Solana dependencies
-- [ ] Create basic wallet creation/import UI components
-- [ ] Set up Zustand state management
+- [ ] **Initialization & Setup**:
+  - [ ] Initialize Next.js project with TypeScript and App Router
+  - [ ] Set up Tailwind CSS styling framework
+  - [ ] Install Viem (Ethereum) and Solana web3.js dependencies
+  - [ ] Configure Zustand state management store
+  - [ ] Create project structure with component directories
+  - [ ] Set up TypeScript types and security headers
 
 **Deliverables**:
 
@@ -448,6 +450,7 @@ impl EncryptedKeystore {
 **Frontend Tasks**:
 
 - [ ] Implement API client for backend communication
+- [ ] Create basic wallet creation/import UI components
 - [ ] Create wallet dashboard showing accounts
 - [ ] Add basic balance display (mock data initially)
 - [ ] Implement wallet lock/unlock flow
