@@ -1,25 +1,15 @@
 //! Wallet-related functionality
-//! 
+//!
 //! Contains HD wallet implementation, mnemonic handling, and key management.
 
 // Public modules
-pub mod mnemonic;
 pub mod hd_wallet;
+pub mod mnemonic;
 
 // Re-export commonly used types for convenience
 pub use mnemonic::{
-    MnemonicManager, 
-    WalletMnemonic, 
-    EntropyLevel, 
-    MnemonicError,
-    generate_test_mnemonic,
-    generate_entropy,
+    generate_entropy, generate_test_mnemonic, EntropyLevel, MnemonicError, MnemonicManager,
+    WalletMnemonic,
 };
 
-pub use hd_wallet::{
-    HDWallet,
-    Account,
-    Chain,
-    HDWalletError,
-    derivation,
-};
+pub use hd_wallet::{derivation, Account, Chain, HDWallet, HDWalletError};
