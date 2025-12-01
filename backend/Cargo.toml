@@ -75,6 +75,11 @@ thiserror = "1.0"  # Custom error types
 # === Memory Security ===
 # Zero sensitive data when no longer needed
 zeroize = { version = "1.7", features = ["derive"] }
+axum = "0.8.7"
+tower = "0.5.2"
+tower-http = { version = "0.6.7", features = ["trace"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # Development dependencies for testing
 [dev-dependencies]
