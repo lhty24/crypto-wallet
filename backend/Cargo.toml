@@ -80,6 +80,7 @@ tower = "0.5.2"
 tower-http = { version = "0.6.7", features = ["cors", "trace", "limit"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+chrono = "0.4"
 
 # Development dependencies for testing
 [dev-dependencies]

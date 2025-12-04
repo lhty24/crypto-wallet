@@ -1,7 +1,9 @@
+use crate::api::wallet;
 use anyhow::{Context, Result};
 use axum::{
     http::{self, HeaderValue},
     routing::get,
+    routing::post,
     Router,
 };
 use tower_http::{cors::CorsLayer, limit::RequestBodyLimitLayer, trace::TraceLayer};
@@ -38,8 +40,10 @@ fn create_app() -> Router {
     Router::new()
         .route("/", get(root))
         .route("/health", get(health_check))
-        .layer(configure_cors())           // CORS must be before other middleware
-        .layer(configure_json_middleware()) // 16KB request limit for security  
+        .route("/wallet/create", post(wallet::create_wallet))
+        .route("/wallet/import", post(wallet::import_wallet))
+        .layer(configure_cors()) // CORS must be before other middleware
+        .layer(configure_json_middleware()) // 16KB request limit for security
         .layer(TraceLayer::new_for_http()) // HTTP request/response logging
 }
 
@@ -68,7 +72,7 @@ fn configure_cors() -> CorsLayer {
             http::header::AUTHORIZATION, // For future wallet authentication
             http::header::ACCEPT,
         ])
-        .allow_credentials(true)  // Enable cookies/auth tokens
+        .allow_credentials(true) // Enable cookies/auth tokens
         .max_age(std::time::Duration::from_secs(3600)) // Cache preflight for 1 hour
 }
 
