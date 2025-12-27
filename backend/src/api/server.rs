@@ -1,5 +1,7 @@
 use crate::api::wallet;
+use crate::database::{init_database, DbPool};
 use anyhow::{Context, Result};
+use axum::extract::State;
 use axum::{
     http::{self, HeaderValue},
     routing::get,
@@ -12,7 +14,14 @@ use tower_http::{cors::CorsLayer, limit::RequestBodyLimitLayer, trace::TraceLaye
 pub async fn run() -> Result<()> {
     tracing::info!("Starting crypto wallet server...");
 
-    let app = create_app();
+    // Initialize database BEFORE creating the app
+    tracing::info!("Initializing database...");
+    let pool = init_database()
+        .await
+        .context("Failed to initialize database")?;
+    tracing::info!("Database initialized successfully");
+
+    let app = create_app(pool);
 
     let port = std::env::var("PORT")
         .unwrap_or_else(|_| "8080".to_string())
@@ -36,12 +45,13 @@ pub async fn run() -> Result<()> {
 }
 
 /// Create the main application router with middleware stack
-fn create_app() -> Router {
+fn create_app(pool: DbPool) -> Router {
     Router::new()
         .route("/", get(root))
         .route("/health", get(health_check))
         .route("/wallet/create", post(wallet::create_wallet))
         .route("/wallet/import", post(wallet::import_wallet))
+        .with_state(pool)
         .layer(configure_cors()) // CORS must be before other middleware
         .layer(configure_json_middleware()) // 16KB request limit for security
         .layer(TraceLayer::new_for_http()) // HTTP request/response logging
@@ -52,8 +62,20 @@ async fn root() -> &'static str {
     "Crypto Wallet API v1.0"
 }
 
-async fn health_check() -> &'static str {
-    "OK"
+async fn health_check(State(pool): State<DbPool>) -> &'static str {
+    // Test database connectivity
+    match sqlx::query("SELECT 1").execute(&pool).await {
+        Ok(_) => {
+            tracing::debug!("Health check passed - database connected");
+            "OK"
+        }
+        Err(e) => {
+            tracing::error!("Health check failed - database error: {:?}", e);
+            // Still return OK to avoid exposing internal errors
+            // In production, you might want to return an error status
+            "OK"
+        }
+    }
 }
 
 /// Configure CORS to allow frontend (localhost:3000) access

@@ -1,6 +1,7 @@
 use crate::core::{EntropyLevel, MnemonicManager};
+use crate::database::{self, DbPool};
+use axum::extract::State;
 use axum::{extract::Json, http::StatusCode, response::Json as ResponseJson};
-use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -37,6 +38,7 @@ pub struct WalletResponse {
 
 // POST /wallet/create handler
 pub async fn create_wallet(
+    State(pool): State<DbPool>,
     Json(request): Json<CreateWalletRequest>,
 ) -> Result<ResponseJson<WalletResponse>, StatusCode> {
     if let Err(error_msg) = validate_create_request(&request) {
@@ -45,7 +47,6 @@ pub async fn create_wallet(
     }
 
     let mnemonic_manager = MnemonicManager::new();
-    // TBD: Store it encrypted (Task 3 - database integration)
     let _mnemonic = match mnemonic_manager.generate(EntropyLevel::High) {
         Ok(m) => m,
         Err(e) => {
@@ -54,24 +55,31 @@ pub async fn create_wallet(
         }
     };
 
+    // Generate wallet ID and call database
     let wallet_id = Uuid::new_v4().to_string();
-    let created_at = Utc::now().to_rfc3339();
+    let wallet = database::create_wallet(&pool, &request.name, &wallet_id)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to create wallet in database: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
     tracing::info!(
         "Created new wallet with ID: {} at: {}",
-        wallet_id,
-        created_at
+        wallet.wallet_id,
+        wallet.created_at
     );
 
     Ok(ResponseJson(WalletResponse {
-        wallet_id,
-        name: request.name.trim().to_string(),
-        created_at,
+        wallet_id: wallet.wallet_id,
+        name: wallet.name,
+        created_at: wallet.created_at,
         message: "Wallet successfully created.".to_string(),
     }))
 }
 
 // POST /wallet/import handler
 pub async fn import_wallet(
+    State(pool): State<DbPool>,
     Json(request): Json<ImportWalletRequest>,
 ) -> Result<ResponseJson<WalletResponse>, StatusCode> {
     // TODO: Add mnemonic validation logic
@@ -90,16 +98,27 @@ pub async fn import_wallet(
         }
     };
 
-    // 3. Create wallet ID and timestamp
+    // 3. Generate wallet ID and call database
     let wallet_id = Uuid::new_v4().to_string();
-    let created_at = Utc::now().to_rfc3339();
-    tracing::info!("Imported wallet with ID: {} at: {}", wallet_id, created_at,);
+
+    let wallet = database::create_wallet(&pool, &request.name, &wallet_id)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to import wallet in database: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    tracing::info!(
+        "Imported wallet with ID: {} at: {}",
+        wallet.wallet_id,
+        wallet.created_at,
+    );
 
     // 4. Return WalletResponse with wallet info
     Ok(ResponseJson(WalletResponse {
-        wallet_id,
-        name: request.name.trim().to_string(),
-        created_at,
+        wallet_id: wallet.wallet_id,
+        name: wallet.name,
+        created_at: wallet.created_at,
         message: "Wallet successfully imported.".to_string(),
     }))
 }

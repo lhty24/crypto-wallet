@@ -20,3 +20,5 @@ pub mod core;
 
 // API modules for external communication (will be added later)
 pub mod api;
+
+pub mod database;
