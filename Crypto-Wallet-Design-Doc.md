@@ -441,19 +441,45 @@ impl EncryptedKeystore {
 
 **Backend Tasks**:
 
-- [ ] Set up Axum web server
-- [ ] Implement wallet creation/import API endpoints
-- [ ] Add basic SQLite database for wallet metadata
-- [ ] Implement wallet unlock/lock functionality
-- [ ] Create account derivation endpoints
+- [ ] Set up Axum web server ✅ (Already completed)
+- [ ] Implement simplified wallet metadata-only API endpoints
+  - [ ] Remove sensitive data (passwords, mnemonics) from create/import endpoints
+  - [ ] Simplify request structures to metadata-only
+  - [ ] Update response structures for non-custodial model
+- [ ] Add basic SQLite database for wallet metadata ✅ (Already completed)
+- [ ] Implement wallet management endpoints
+  - [ ] GET /wallets - List user's wallet metadata
+  - [ ] POST /wallet/{id}/addresses - Register derived addresses from frontend
+  - [ ] Wallet metadata CRUD operations (no sensitive data)
+- [ ] Create foundation for blockchain service endpoints
+  - [ ] GET /wallet/{id}/balance - Balance checking for registered addresses
+  - [ ] GET /wallet/{id}/transactions - Transaction history
+  - [ ] POST /wallet/{id}/broadcast - Broadcast signed transactions (future)
+- [ ] Remove all mnemonic generation and encryption from backend
+  - [ ] Clean up unused mnemonic handling code
+  - [ ] Ensure zero sensitive data processing
 
 **Frontend Tasks**:
 
-- [ ] Implement API client for backend communication
-- [ ] Create basic wallet creation/import UI components
-- [ ] Create wallet dashboard showing accounts
+- [ ] Implement client-side cryptographic functionality
+  - [ ] Client-side mnemonic generation (BIP39)
+  - [ ] Password-based encryption system (AES-256-GCM + Argon2)
+  - [ ] HD wallet derivation (BIP32/BIP44) for address generation
+  - [ ] Secure memory management and cleanup
+- [ ] Build secure local storage management
+  - [ ] Encrypted mnemonic storage in localStorage/IndexedDB
+  - [ ] Wallet unlock/lock session management
+  - [ ] Auto-timeout and security features
+- [ ] Implement API client for metadata-only backend communication
+- [ ] Create wallet creation/import UI with client-side crypto
+  - [ ] Mnemonic generation and display
+  - [ ] Password entry and validation
+  - [ ] Mnemonic backup confirmation flow
+- [ ] Create wallet dashboard with locally-stored encrypted wallets
+  - [ ] Wallet listing from local storage
+  - [ ] Unlock/lock interface
+  - [ ] Account derivation and display
 - [ ] Add basic balance display (mock data initially)
-- [ ] Implement wallet lock/unlock flow
 
 **Integration**:
 
@@ -470,19 +496,29 @@ impl EncryptedKeystore {
 **Backend Tasks**:
 
 - [ ] Integrate Ethereum RPC client
-- [ ] Implement Ethereum account derivation
-- [ ] Add balance checking for ETH
-- [ ] Implement transaction building for ETH transfers
+- [ ] Add balance checking for ETH (for registered addresses)
+- [ ] Implement unsigned transaction building for ETH transfers
 - [ ] Add gas estimation logic
-- [ ] Create transaction signing and broadcasting
+- [ ] Create transaction broadcasting (receives signed tx from frontend)
+- [ ] Implement address monitoring and transaction indexing
+- [ ] Add support for multiple Ethereum networks (mainnet/testnets)
 
 **Frontend Tasks**:
 
+- [ ] Implement Ethereum private key derivation from mnemonic
+  - [ ] BIP44 Ethereum derivation path (m/44'/60'/0'/0/x)
+  - [ ] Private key generation for Ethereum accounts
+  - [ ] Address generation from private keys
 - [ ] Set up Viem for Ethereum interactions
+- [ ] Implement client-side transaction signing
+  - [ ] Sign ETH transfer transactions with private keys
+  - [ ] Manage nonce and gas parameters
+  - [ ] Secure private key handling during signing
 - [ ] Implement balance fetching and display
 - [ ] Create send transaction form with gas estimation
 - [ ] Add transaction history view
 - [ ] Implement network switching (mainnet/testnets)
+- [ ] Register derived Ethereum addresses with backend
 
 **Testing**:
 
@@ -499,18 +535,21 @@ impl EncryptedKeystore {
 **Backend Tasks**:
 
 - [ ] Implement ERC-20 token contract interactions
-- [ ] Add token balance checking
-- [ ] Implement ERC-20 transfer transactions
-- [ ] Create token metadata fetching
-- [ ] Add custom token support
+- [ ] Add token balance checking (for registered addresses)
+- [ ] Implement unsigned ERC-20 transfer transaction building
+- [ ] Create token metadata fetching (symbol, decimals, name)
+- [ ] Add custom token support and token list management
+- [ ] Implement token transaction history indexing
 
 **Frontend Tasks**:
 
-- [ ] Create token list component
+- [ ] Implement ERC-20 transaction signing with private keys
+- [ ] Create token list component with local storage
 - [ ] Add token balance display
-- [ ] Implement token transfer UI
+- [ ] Implement token transfer UI with gas estimation
 - [ ] Create custom token addition flow
 - [ ] Add token search and filtering
+- [ ] Secure handling of token contract interactions
 
 #### Week 4: Transaction History & UX
 
@@ -539,38 +578,65 @@ impl EncryptedKeystore {
 **Backend Tasks**:
 
 - [ ] Integrate Solana RPC client
-- [ ] Implement Solana account derivation (different from Ethereum)
-- [ ] Add SOL balance checking and transactions
-- [ ] Implement SPL token support
-- [ ] Create chain abstraction layer
+- [ ] Add SOL balance checking (for registered addresses)
+- [ ] Implement unsigned Solana transaction building
+- [ ] Implement SPL token support and balance checking
+- [ ] Create chain abstraction layer for multiple blockchains
+- [ ] Add Solana address monitoring and transaction indexing
 
 **Frontend Tasks**:
 
+- [ ] Implement Solana private key derivation from mnemonic
+  - [ ] BIP44 Solana derivation path (m/44'/501'/0'/0')
+  - [ ] Ed25519 key pair generation for Solana
+  - [ ] Solana address generation from public keys
 - [ ] Integrate @solana/web3.js
+- [ ] Implement client-side Solana transaction signing
+  - [ ] Sign SOL transfer transactions
+  - [ ] Sign SPL token transactions
+  - [ ] Secure handling of Ed25519 private keys
 - [ ] Add Solana network support in UI
 - [ ] Implement chain switching interface
 - [ ] Add SPL token support
-- [ ] Create unified transaction interface
+- [ ] Create unified transaction interface for multiple chains
+- [ ] Register derived Solana addresses with backend
 
 **Architecture**:
 
-- [ ] Refactor for multi-chain support
-- [ ] Create common interfaces for different chains
-- [ ] Implement chain-specific configurations
+- [ ] Refactor frontend for multi-chain private key management
+- [ ] Create common interfaces for different chains (Ethereum/Solana)
+- [ ] Implement chain-specific configurations and derivation paths
+- [ ] Unified local storage for multi-chain encrypted wallets
 
 ### Phase 5: Production Features (Weeks 5-6)
 
 #### Week 5: Security Hardening
 
-**Goals**: Implement production-level security features
+**Goals**: Implement production-level security features for non-custodial architecture
 
-**Tasks**:
+**Frontend Security Tasks**:
 
-- [ ] Security audit of key management
-- [ ] Implement advanced encryption options
-- [ ] Add backup and recovery flows
-- [ ] Implement session management
+- [ ] Security audit of client-side key management
+- [ ] Implement advanced encryption options (hardware security modules prep)
+- [ ] Add comprehensive backup and recovery flows
+  - [ ] Mnemonic phrase backup verification
+  - [ ] Encrypted wallet export/import
+  - [ ] Recovery phrase testing interface
+- [ ] Implement robust session management
+  - [ ] Auto-lock timer configuration
+  - [ ] Memory clearing verification
+  - [ ] Secure session state management
 - [ ] Add security warnings and confirmations
+  - [ ] Large transaction confirmations
+  - [ ] Suspicious activity warnings
+  - [ ] Phishing protection measures
+
+**Backend Security Tasks**:
+
+- [ ] API security hardening
+- [ ] Rate limiting implementation
+- [ ] Address validation and monitoring
+- [ ] Blockchain data integrity verification
 
 #### Week 6: UX Polish & Documentation
 
@@ -580,9 +646,12 @@ impl EncryptedKeystore {
 
 - [ ] UI/UX improvements and responsive design
 - [ ] Comprehensive error handling and user feedback
-- [ ] Performance optimization
+- [ ] Performance optimization for client-side crypto operations
 - [ ] Complete documentation
-- [ ] Security best practices guide
+  - [ ] Non-custodial architecture documentation
+  - [ ] Client-side security implementation guide
+  - [ ] Frontend crypto library documentation
+- [ ] Security best practices guide for non-custodial wallets
 
 ---
 
@@ -590,22 +659,33 @@ impl EncryptedKeystore {
 
 ### Critical Security Principles
 
-#### 1. Private Key Protection 🔒
+#### 1. Non-Custodial Security Model 🔒
+
+- **Frontend-only key management** - Private keys never leave client device
+- **Zero backend trust** - Backend never sees mnemonics, passwords, or private keys
+- **Client-side encryption** - All sensitive data encrypted before storage
+- **Local storage only** - Encrypted mnemonics stored in browser localStorage
+- **No server-side custody** - Backend handles only metadata and blockchain services
+
+#### 2. Private Key Protection 
 
 - **Never log private keys** - Not even in development environments
-- **Secure random generation** - Use cryptographically secure random sources
-- **Encryption at rest** - AES-256-GCM with user-derived passwords
+- **Secure random generation** - Use Web Crypto API or crypto-js with secure entropy
+- **Encryption at rest** - AES-256-GCM with user-derived passwords (Argon2)
 - **Memory protection** - Clear sensitive data from memory after use
-- **No network transmission** - Private keys never leave the backend
+- **No network transmission** - Private keys and mnemonics never sent to backend
+- **Derivation security** - Secure BIP32/BIP44 key derivation implementation
 
-#### 2. Mnemonic Security
+#### 3. Mnemonic Security
 
+- **Client-side generation** - Mnemonics generated in frontend using crypto-secure RNG
 - **BIP39 compliance** - Use standardized wordlist and validation
 - **Entropy requirements** - Minimum 128-bit entropy (12 words), prefer 256-bit (24 words)
 - **Secure display** - Mask mnemonics when not explicitly viewing
 - **Backup verification** - Require users to confirm backup before proceeding
+- **Recovery testing** - Provide interface to test mnemonic recovery
 
-#### 3. Transaction Security
+#### 4. Transaction Security
 
 - **Transaction verification** - Always display transaction details before signing
 - **Gas limit protection** - Prevent excessive gas costs and potential attacks
@@ -613,7 +693,7 @@ impl EncryptedKeystore {
 - **Replay protection** - Proper nonce management and chain ID validation
 - **Amount validation** - Prevent integer overflow and negative amounts
 
-#### 4. Network Security
+#### 5. Network Security
 
 - **HTTPS enforcement** - All communications must use TLS
 - **RPC endpoint validation** - Verify SSL certificates for blockchain connections
@@ -621,7 +701,7 @@ impl EncryptedKeystore {
 - **Input sanitization** - Validate and sanitize all user inputs
 - **CORS configuration** - Restrict cross-origin requests appropriately
 
-#### 5. Application Security
+#### 6. Application Security
 
 - **Content Security Policy** - Prevent XSS attacks
 - **Dependency auditing** - Regular `npm audit` and `cargo audit`
@@ -872,7 +952,30 @@ test("complete wallet setup and transaction flow", async ({ page }) => {
 
 ## Key Technical Decisions
 
-### 1. Web App vs Chrome Extension vs Mobile App
+### 1. Non-Custodial vs Custodial Architecture
+
+**Decision**: True Non-Custodial Architecture (Frontend Encryption)
+**Rationale**:
+
+- **User Sovereignty**: Users maintain complete control over their private keys and funds
+- **Zero Trust**: Backend never sees plaintext mnemonics, passwords, or private keys
+- **Security**: Eliminates server-side custody risks and attack vectors
+- **Industry Standard**: Follows established crypto wallet patterns (MetaMask, hardware wallets)
+- **Regulatory Clarity**: No custody responsibilities or compliance requirements
+
+**Implementation Details**:
+- **Frontend Responsibilities**: Mnemonic generation, encryption, private key derivation, transaction signing
+- **Backend Responsibilities**: Metadata storage, blockchain services, address monitoring
+- **Storage Model**: Encrypted mnemonics in client localStorage, metadata only in backend database
+- **Security Flow**: Password → Argon2 → AES-256-GCM encryption → Local storage
+
+**Trade-offs Considered**:
+- **Complexity**: Increased frontend cryptographic complexity vs simplified backend
+- **Recovery**: No backend-assisted recovery vs user-controlled backup responsibility  
+- **UX**: Password requirements vs convenience of custodial solutions
+- **Support**: Users responsible for key management vs backend-assisted recovery
+
+### 2. Web App vs Chrome Extension vs Mobile App
 
 **Decision**: Start with Web Application
 **Rationale**:
