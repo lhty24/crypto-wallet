@@ -196,20 +196,32 @@ Build a functional multi-chain cryptocurrency wallet from scratch. The wallet wi
 │                              FRONTEND LAYER                                     │
 │                         (Next.js + TypeScript)                                 │
 ├─────────────────────────────────────────────────────────────────────────────────┤
-│ UI Components          │ State Management       │ Blockchain Connectors        │
+│ UI Components          │ Crypto Engine (🔐)     │ Blockchain Connectors        │
 │ ┌─────────────────────┐│ ┌───────────────────┐  │ ┌──────────────────────────┐ │
-│ │ WalletDashboard     ││ │ Zustand Store     │  │ │ EVM Provider (Viem)      │ │
-│ │ AccountList         ││ │ - User State      │  │ │ - Ethereum               │ │
-│ │ SendTransaction     ││ │ - Wallet State    │  │ │ - Polygon                │ │
-│ │ TransactionHistory  ││ │ - UI State        │  │ │ - Arbitrum               │ │
-│ │ TokenBalances       ││ │ - Settings        │  │ │ - Optimism               │ │
-│ │ SecuritySettings    ││ │                   │  │ └──────────────────────────┘ │
-│ └─────────────────────┘│ └───────────────────┘  │ ┌──────────────────────────┐ │
-│                        │                        │ │ Solana Provider          │ │
-│                        │                        │ │ (@solana/web3.js)        │ │
-│                        │                        │ │ - Mainnet                │ │
-│                        │                        │ │ - Devnet                 │ │
-│                        │                        │ └──────────────────────────┘ │
+│ │ WalletDashboard     ││ │ BIP39 Generator   │  │ │ EVM Provider (Viem)      │ │
+│ │ CreateWallet        ││ │ - Mnemonic Gen    │  │ │ - Ethereum               │ │
+│ │ UnlockWallet        ││ │ - Entropy Source  │  │ │ - Polygon                │ │
+│ │ SendTransaction     ││ │ AES Encryption    │  │ │ - Arbitrum               │ │
+│ │ TransactionHistory  ││ │ - Argon2 KDF      │  │ │ - Optimism               │ │
+│ │ SecuritySettings    ││ │ - Local Storage   │  │ └──────────────────────────┘ │
+│ └─────────────────────┘│ │ HD Key Derivation │  │ ┌──────────────────────────┐ │
+│ ┌─────────────────────┐│ │ - BIP32/BIP44     │  │ │ Solana Provider          │ │
+│ │ State Management    ││ │ - Private Keys    │  │ │ (@solana/web3.js)        │ │
+│ │ - UI State          ││ │ TX Signing        │  │ │ - Mainnet                │ │
+│ │ - Session State     ││ │ - Ethereum        │  │ │ - Devnet                 │ │
+│ │ - Settings          ││ │ - Solana (Ed25519)│  │ └──────────────────────────┘ │
+│ └─────────────────────┘│ └───────────────────┘  │                              │
+└─────────────────────────────────────────────────────────────────────────────────┘
+│                               CLIENT STORAGE                                   │
+│ ┌─────────────────────────────────────────────────────────────────────────────┐ │
+│ │ Browser localStorage/IndexedDB                                              │ │
+│ │ ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────────────────────┐ │ │
+│ │ │ Encrypted Wallets│ │ User Preferences│ │ Session Data                    │ │ │
+│ │ │ - AES-256 Blob   │ │ - UI Settings   │ │ - Unlocked Wallet IDs           │ │ │
+│ │ │ - Salt & IV      │ │ - Network Prefs │ │ - Auto-lock Timers              │ │ │
+│ │ │ - Wallet Metadata│ │ - Theme         │ │ - Temporary State               │ │ │
+│ │ └─────────────────┘ └─────────────────┘ └─────────────────────────────────┘ │ │
+│ └─────────────────────────────────────────────────────────────────────────────┐ │
 └─────────────────────────────────────────────────────────────────────────────────┘
                                       │
                            ┌──────────┴──────────┐
@@ -221,45 +233,48 @@ Build a functional multi-chain cryptocurrency wallet from scratch. The wallet wi
 │                               BACKEND LAYER                                     │
 │                              (Rust + Axum)                                     │
 ├─────────────────────────────────────────────────────────────────────────────────┤
-│ API Layer              │ Core Wallet Engine     │ Blockchain Clients          │
+│ API Layer              │ Blockchain Services    │ Blockchain Clients          │
 │ ┌─────────────────────┐│ ┌───────────────────┐  │ ┌──────────────────────────┐ │
-│ │ REST Endpoints      ││ │ HD Wallet Manager │  │ │ EVM RPC Client           │ │
-│ │ - /wallet/create    ││ │ - BIP39 Mnemonic  │  │ │ - Ethereum               │ │
-│ │ - /wallet/import    ││ │ - BIP32 Derivation│  │ │ - Polygon                │ │
-│ │ - /accounts         ││ │ - BIP44 Paths     │  │ │ - Layer 2s               │ │
-│ │ - /balance          ││ │ - Key Management  │  │ └──────────────────────────┘ │
-│ │ - /send             ││ │                   │  │ ┌──────────────────────────┐ │
-│ │ - /history          ││ └───────────────────┘  │ │ Solana RPC Client        │ │
-│ │ - /tokens           ││ ┌───────────────────┐  │ │ - JSON-RPC 2.0           │ │
-│ └─────────────────────┘│ │ Transaction Engine│  │ │ - WebSocket              │ │
-│ ┌─────────────────────┐│ │ - TX Builder      │  │ │ - Commitment Levels      │ │
-│ │ WebSocket Events    ││ │ - TX Signer       │  │ └──────────────────────────┘ │
+│ │ Metadata Endpoints  ││ │ Address Monitoring│  │ │ EVM RPC Client           │ │
+│ │ - /wallets (CRUD)   ││ │ - Balance Tracking│  │ │ - Ethereum               │ │
+│ │ - /wallet/addresses ││ │ - TX History      │  │ │ - Polygon                │ │
+│ │ - /balance          ││ │ - Token Discovery │  │ │ - Layer 2s               │ │
+│ │ - /history          ││ │ Address Registry  │  │ └──────────────────────────┘ │
+│ │ - /broadcast        ││ │ - Public Keys     │  │ ┌──────────────────────────┐ │
+│ │ - /tokens           ││ │ - Address Labels  │  │ │ Solana RPC Client        │ │
+│ │ - /gas-estimate     ││ └───────────────────┘  │ │ - JSON-RPC 2.0           │ │
+│ └─────────────────────┘│ ┌───────────────────┐  │ │ - WebSocket              │ │
+│ ┌─────────────────────┐│ │ Transaction Relay │  │ │ - Commitment Levels      │ │
+│ │ WebSocket Events    ││ │ - TX Broadcasting │  │ └──────────────────────────┘ │
 │ │ - Balance Updates   ││ │ - Gas Estimation  │  │                              │
-│ │ - TX Confirmations  ││ │ - Nonce Management│  │                              │
-│ │ - Price Updates     ││ └───────────────────┘  │                              │
-│ └─────────────────────┘│                        │                              │
+│ │ - TX Confirmations  ││ │ - Nonce Management│  │ ⚠️  NO PRIVATE KEYS         │
+│ │ - Price Updates     ││ │ - Status Tracking │  │ ⚠️  NO MNEMONICS            │
+│ └─────────────────────┘│ └───────────────────┘  │ ⚠️  NO PASSWORDS            │
 └─────────────────────────────────────────────────────────────────────────────────┘
                                       │
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│                              STORAGE LAYER                                     │
+│                              BACKEND STORAGE                                   │
 ├─────────────────────────────────────────────────────────────────────────────────┤
-│ Key Storage            │ Application Data       │ Blockchain Cache             │
+│ ⚠️  NO SENSITIVE DATA   │ Metadata Storage      │ Blockchain Cache             │
 │ ┌─────────────────────┐│ ┌───────────────────┐  │ ┌──────────────────────────┐ │
-│ │ Encrypted Keys      ││ │ SQLite Database   │  │ │ Redis Cache              │ │
-│ │ - AES-256-GCM       ││ │ - User Settings   │  │ │ - Token Prices           │ │
-│ │ - Argon2 KDF        ││ │ - Account Metadata│  │ │ - Transaction History    │ │
-│ │ - Salt Generation   ││ │ - Transaction Log │  │ │ - Balance Cache          │ │
-│ │ - Key Derivation    ││ │ - Contact List    │  │ │ - Network Status         │ │
+│ │ ❌ NO Private Keys   ││ │ SQLite Database   │  │ │ Redis Cache              │ │
+│ │ ❌ NO Mnemonics     ││ │ - Wallet Metadata │  │ │ - Token Prices           │ │
+│ │ ❌ NO Passwords     ││ │ - Public Addresses│  │ │ - Transaction History    │ │
+│ │                     ││ │ - Account Labels  │  │ │ - Balance Cache          │ │
+│ │ ✅ Public Data Only ││ │ - Settings        │  │ │ - Network Status         │ │
 │ └─────────────────────┘│ └───────────────────┘  │ └──────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Core Principles
 
-1. **Security First**: Private keys never exposed to frontend
-2. **Modular Design**: Easy to add new blockchain support
-3. **Separation of Concerns**: Clear boundaries between layers
-4. **Fail-Safe Defaults**: Secure configurations by default
+1. **Non-Custodial Security**: Private keys never leave client device
+2. **Frontend Crypto Responsibility**: All sensitive operations client-side
+3. **Zero Backend Trust**: Backend never sees mnemonics, passwords, or keys
+4. **Client-Side Encryption**: AES-256-GCM with user-derived passwords
+5. **Modular Design**: Easy to add new blockchain support
+6. **Separation of Concerns**: Clear boundaries between crypto and coordination layers
+7. **Fail-Safe Defaults**: Secure configurations by default
 
 ---
 
@@ -275,37 +290,48 @@ src/
 │   ├── wallet/
 │   │   ├── WalletDashboard.tsx     // Main wallet overview
 │   │   ├── AccountList.tsx         // HD wallet account management
-│   │   ├── CreateWallet.tsx        // Mnemonic generation UI
-│   │   └── ImportWallet.tsx        // Import from mnemonic/private key
+│   │   ├── CreateWallet.tsx        // Client-side mnemonic generation UI
+│   │   ├── ImportWallet.tsx        // Import and encrypt mnemonic
+│   │   ├── UnlockWallet.tsx        // Password entry and decryption
+│   │   └── WalletSelector.tsx      // Select from local encrypted wallets
 │   ├── transactions/
-│   │   ├── SendForm.tsx           // Transaction creation
+│   │   ├── SendForm.tsx           // Transaction creation and signing
 │   │   ├── TransactionHistory.tsx  // TX history with filtering
 │   │   ├── TransactionDetails.tsx  // Detailed TX view
+│   │   ├── TransactionSigner.tsx   // Client-side transaction signing
 │   │   └── GasEstimator.tsx       // Gas price estimation
 │   ├── tokens/
 │   │   ├── TokenList.tsx          // ERC-20/SPL token balances
 │   │   ├── TokenDetails.tsx       // Individual token view
 │   │   └── AddToken.tsx           // Custom token addition
-│   └── security/
-│       ├── SecuritySettings.tsx   // Backup, password change
-│       ├── BackupMnemonic.tsx     // Mnemonic backup flow
-│       └── PasswordManager.tsx    // Password management
+│   ├── security/
+│   │   ├── SecuritySettings.tsx   // Backup, password change
+│   │   ├── BackupMnemonic.tsx     // Mnemonic backup flow
+│   │   ├── PasswordManager.tsx    // Password management
+│   │   └── AutoLockSettings.tsx   // Session timeout configuration
+│   └── crypto/
+│       ├── MnemonicGenerator.tsx  // BIP39 mnemonic generation
+│       ├── EncryptionManager.tsx  // AES-256 encryption/decryption
+│       ├── KeyDerivation.tsx      // BIP32/BIP44 key derivation
+│       └── LocalStorage.tsx       // Secure local storage management
 ```
 
 #### State Management (Zustand)
 
 ```typescript
 interface WalletState {
-  // Core State
+  // Core State  
   isUnlocked: boolean;
+  currentWallet: EncryptedWallet | null;
   currentAccount: Account | null;
   accounts: Account[];
+  localWallets: EncryptedWallet[]; // From localStorage
 
   // Multi-Chain State
   activeChain: SupportedChain;
   supportedChains: ChainConfig[];
 
-  // Balance & Token State
+  // Balance & Token State (fetched from backend)
   balances: Record<string, Balance>;
   tokens: Record<string, Token[]>;
 
@@ -313,12 +339,26 @@ interface WalletState {
   pendingTransactions: Transaction[];
   transactionHistory: Transaction[];
 
-  // Actions
-  unlock: (password: string) => Promise<void>;
-  createWallet: (mnemonic: string) => Promise<void>;
-  importWallet: (mnemonic: string) => Promise<void>;
-  switchChain: (chainId: string) => void;
-  sendTransaction: (params: SendParams) => Promise<string>;
+  // Security State
+  autoLockTimer: number;
+  lastActivity: Date;
+
+  // Crypto Actions (Client-Side)
+  generateMnemonic: () => string;
+  encryptMnemonic: (mnemonic: string, password: string) => EncryptedWallet;
+  decryptMnemonic: (wallet: EncryptedWallet, password: string) => string;
+  deriveKeys: (mnemonic: string, chain: SupportedChain) => PrivateKey[];
+  signTransaction: (tx: UnsignedTransaction, privateKey: PrivateKey) => SignedTransaction;
+  
+  // Storage Actions
+  saveWalletLocally: (wallet: EncryptedWallet) => void;
+  loadLocalWallets: () => EncryptedWallet[];
+  
+  // Backend Actions (Metadata Only)
+  registerWallet: (name: string) => Promise<string>; // Returns wallet_id
+  registerAddresses: (walletId: string, addresses: string[]) => Promise<void>;
+  fetchBalances: (walletId: string) => Promise<Balance[]>;
+  broadcastTransaction: (signedTx: SignedTransaction) => Promise<string>;
 }
 ```
 
