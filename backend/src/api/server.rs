@@ -49,6 +49,8 @@ fn create_app(pool: DbPool) -> Router {
     Router::new()
         .route("/", get(root))
         .route("/health", get(health_check))
+        .route("/wallets", get(wallet::get_wallets))
+        .route("/wallet/:id/addresses", post(wallet::register_address))
         .route("/wallet/create", post(wallet::create_wallet))
         .route("/wallet/import", post(wallet::import_wallet))
         .with_state(pool)

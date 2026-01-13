@@ -29,6 +29,9 @@ pub async fn create_wallet(pool: &DbPool, wallet_name: &str, wallet_id: &str) ->
     Ok(wallet)
 }
 
+// TBC
+// pub async fn register_wallet(pool: &DbPool,)
+
 // Find wallet by UUID
 pub async fn get_wallet_by_id(pool: &DbPool, wallet_id: &str) -> Result<Option<Wallet>> {
     let wallet = sqlx::query_as!(
