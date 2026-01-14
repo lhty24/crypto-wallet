@@ -1,4 +1,4 @@
-CREATE TABLE wallets (
+CREATE TABLE IF NOT EXISTS wallets (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     wallet_id TEXT NOT NULL,
@@ -9,13 +9,13 @@ CREATE TABLE wallets (
 );
 
 -- Create index on wallet_id for faster lookups
-CREATE INDEX idx_wallets_wallet_id ON wallets(wallet_id);
+CREATE INDEX IF NOT EXISTS idx_wallets_wallet_id ON wallets(wallet_id);
 
 -- Create index on created_at for sorting
-CREATE INDEX idx_wallets_created_at ON wallets(created_at);
+CREATE INDEX IF NOT EXISTS idx_wallets_created_at ON wallets(created_at);
 
 -- Wallet addresses table (many addresses per wallet)
-CREATE TABLE wallet_addresses (
+CREATE TABLE IF NOT EXISTS wallet_addresses (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     wallet_id TEXT NOT NULL,
     address TEXT NOT NULL,
@@ -35,7 +35,7 @@ CREATE TABLE wallet_addresses (
 );
 
 -- Index for fast lookups by wallet
-CREATE INDEX idx_wallet_addresses_wallet_id ON wallet_addresses(wallet_id);
+CREATE INDEX IF NOT EXISTS idx_wallet_addresses_wallet_id ON wallet_addresses(wallet_id);
 
 -- Index for fast lookups by address (for balance queries)
-CREATE INDEX idx_wallet_addresses_address ON wallet_addresses(address);
+CREATE INDEX IF NOT EXISTS idx_wallet_addresses_address ON wallet_addresses(address);

@@ -4,8 +4,7 @@ use anyhow::{Context, Result};
 use axum::extract::State;
 use axum::{
     http::{self, HeaderValue},
-    routing::get,
-    routing::post,
+    routing::{delete, get, post, put},
     Router,
 };
 use tower_http::{cors::CorsLayer, limit::RequestBodyLimitLayer, trace::TraceLayer};
@@ -50,9 +49,11 @@ fn create_app(pool: DbPool) -> Router {
         .route("/", get(root))
         .route("/health", get(health_check))
         .route("/wallets", get(wallet::get_wallets))
-        .route("/wallet/:id/addresses", post(wallet::register_address))
         .route("/wallet/create", post(wallet::create_wallet))
         .route("/wallet/import", post(wallet::import_wallet))
+        .route("/wallet/{id}", put(wallet::update_wallet))
+        .route("/wallet/{id}", delete(wallet::delete_wallet))
+        .route("/wallet/{id}/addresses", post(wallet::register_address))
         .with_state(pool)
         .layer(configure_cors()) // CORS must be before other middleware
         .layer(configure_json_middleware()) // 16KB request limit for security

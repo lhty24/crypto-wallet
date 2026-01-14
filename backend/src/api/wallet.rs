@@ -20,6 +20,20 @@ pub struct ImportWalletRequest {
     name: String, // User-friendly wallet name
 }
 
+// Request structure for updating wallet name
+#[derive(Deserialize)]
+pub struct UpdateWalletRequest {
+    name: String, // New wallet name
+}
+
+// Response structure for delete operation
+#[derive(Serialize)]
+pub struct DeleteWalletResponse {
+    wallet_id: String,
+    message: String,
+    deleted: bool,
+}
+
 // Success response for both endpoints
 #[derive(Serialize)]
 pub struct WalletResponse {
@@ -120,6 +134,67 @@ pub async fn import_wallet(
         name: wallet.name,
         created_at: wallet.created_at,
         message: "Wallet metadata created. Import and encrypt mnemonic on frontend.".to_string(),
+    }))
+}
+
+// PUT /wallet/{id} handler
+pub async fn update_wallet(
+    State(pool): State<DbPool>,
+    Path(wallet_id): Path<String>,
+    Json(request): Json<UpdateWalletRequest>,
+) -> Result<ResponseJson<WalletResponse>, StatusCode> {
+    // Validate the request
+    if let Err(error_msg) = validate_update_request(&request) {
+        tracing::warn!("Wallet update validation failed: {error_msg}");
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    // Update the wallet name
+    let wallet = database::update_wallet_name(&pool, &request.name, &wallet_id)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to update wallet: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
+        .ok_or_else(|| {
+            tracing::warn!("Attempt to update non-existent wallet: {}", wallet_id);
+            StatusCode::NOT_FOUND
+        })?;
+
+    tracing::info!("Updated wallet {} name to: {}", wallet_id, request.name);
+
+    Ok(ResponseJson(WalletResponse {
+        wallet_id: wallet.wallet_id,
+        name: wallet.name,
+        created_at: wallet.created_at,
+        message: "Wallet name updated successfully".to_string(),
+    }))
+}
+
+// DELETE /wallet/{id} handler
+pub async fn delete_wallet(
+    State(pool): State<DbPool>,
+    Path(wallet_id): Path<String>,
+) -> Result<ResponseJson<DeleteWalletResponse>, StatusCode> {
+    // Delete the wallet
+    let deleted = database::delete_wallet(&pool, &wallet_id)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to delete wallet: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    if !deleted {
+        tracing::warn!("Attempt to delete non-existent wallet: {}", wallet_id);
+        return Err(StatusCode::NOT_FOUND);
+    }
+
+    tracing::info!("Successfully deleted wallet: {}", wallet_id);
+
+    Ok(ResponseJson(DeleteWalletResponse {
+        wallet_id: wallet_id.clone(),
+        message: "Wallet deleted successfully".to_string(),
+        deleted: true,
     }))
 }
 
@@ -255,6 +330,16 @@ fn validate_import_request(request: &ImportWalletRequest) -> Result<(), String> 
         return Err("Wallet name must be 50 characters or less".to_string());
     }
 
+    Ok(())
+}
+
+fn validate_update_request(request: &UpdateWalletRequest) -> Result<(), String> {
+    if request.name.trim().is_empty() {
+        return Err("Wallet name cannot be empty".to_string());
+    }
+    if request.name.len() > 50 {
+        return Err("Wallet name must be 50 characters or less".to_string());
+    }
     Ok(())
 }
 
