@@ -5,3 +5,5 @@
 pub mod server;
 
 pub mod wallet;
+
+pub mod types;

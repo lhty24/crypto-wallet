@@ -54,6 +54,7 @@ fn create_app(pool: DbPool) -> Router {
         .route("/wallet/{id}", put(wallet::update_wallet))
         .route("/wallet/{id}", delete(wallet::delete_wallet))
         .route("/wallet/{id}/addresses", post(wallet::register_address))
+        .route("/wallet/{id}/balance", get(wallet::get_wallet_balance))
         .with_state(pool)
         .layer(configure_cors()) // CORS must be before other middleware
         .layer(configure_json_middleware()) // 16KB request limit for security

@@ -1,3 +1,4 @@
+use super::types::*;
 use crate::database::{self, DbPool};
 use axum::extract::State;
 use axum::{
@@ -5,6 +6,7 @@ use axum::{
     http::StatusCode,
     response::Json as ResponseJson,
 };
+use chrono;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -308,6 +310,60 @@ pub async fn register_wallet(
     Ok(ResponseJson(wallet_response))
 }
 
+// GET /wallet/{id}/balance handler
+pub async fn get_wallet_balance(
+    State(pool): State<DbPool>,
+    Path(wallet_id): Path<String>,
+) -> Result<ResponseJson<WalletBalanceResponse>, StatusCode> {
+    // 1. Verify wallet exists
+    let _wallet = database::get_wallet_by_id(&pool, &wallet_id)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to check wallet existence: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
+        .ok_or_else(|| {
+            tracing::warn!(
+                "Attempt to get balance for non-existent wallet: {}",
+                wallet_id
+            );
+            StatusCode::NOT_FOUND
+        })?;
+
+    // 2. Query database for all addresses registered to this wallet
+    let addresses = database::get_wallet_addresses(&pool, &wallet_id)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to fetch wallet addresses: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    // 3. For each address, create mock balance data (real RPC integration comes later)
+    let timestamp = chrono::Utc::now().to_rfc3339();
+    let balances: Vec<AddressBalance> = addresses
+        .into_iter()
+        .map(|addr| AddressBalance {
+            address: addr.address,
+            chain: addr.chain.clone(),
+            balance: "0.0".to_string(), // Mock balance - real RPC integration later
+            symbol: chain_to_symbol(&addr.chain),
+            timestamp: timestamp.clone(),
+        })
+        .collect();
+
+    tracing::info!(
+        "Retrieved {} balances for wallet {}",
+        balances.len(),
+        wallet_id
+    );
+
+    // 4. Return WalletBalanceResponse with all balances
+    Ok(ResponseJson(WalletBalanceResponse {
+        wallet_id,
+        balances,
+    }))
+}
+
 fn validate_create_request(request: &CreateWalletRequest) -> Result<(), String> {
     if request.name.trim().is_empty() {
         return Err("Wallet name cannot be empty".to_string());
@@ -366,4 +422,14 @@ fn validate_address_request(request: &RegisterAddressRequest) -> Result<(), Stri
     }
 
     Ok(())
+}
+
+// Helper: Convert chain name to token symbol
+fn chain_to_symbol(chain: &str) -> String {
+    match chain.to_lowercase().as_str() {
+        "ethereum" => "ETH".to_string(),
+        "bitcoin" => "BTC".to_string(),
+        "solana" => "SOL".to_string(),
+        _ => chain.to_uppercase(),
+    }
 }
