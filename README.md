@@ -70,8 +70,9 @@ This wallet follows a **true non-custodial architecture**:
 | Framework | Axum 0.8 |
 | Runtime | Tokio (async) |
 | Database | SQLite + sqlx |
-| Crypto | bip39, bitcoin, secp256k1, ed25519-dalek, aes-gcm, argon2 |
 | Logging | tracing + tracing-subscriber |
+
+> **Note:** Backend handles metadata only. All cryptographic operations (mnemonic, encryption, signing) are performed client-side.
 
 ### Frontend (TypeScript)
 | Category | Technology |
@@ -112,7 +113,7 @@ npm install
 **Start the backend:**
 ```bash
 cd backend
-cargo run
+DATABASE_URL="sqlite://./data/wallet.db" cargo run
 # Server starts on http://localhost:8080
 ```
 
@@ -125,10 +126,10 @@ npm run dev
 
 ### Environment Variables
 
-**Backend** (optional):
+**Backend** (required):
 ```bash
-DATABASE_URL=sqlite:wallet.db   # SQLite database path (default: wallet.db)
-PORT=8080                        # Server port (default: 8080)
+DATABASE_URL="sqlite://./data/wallet.db"  # SQLite database path
+PORT=8080                                  # Server port (default: 8080)
 ```
 
 **Frontend**:
@@ -190,23 +191,22 @@ curl -X POST http://localhost:8080/wallet/{wallet_id}/addresses \
 
 ```
 crypto-wallet/
-├── backend/                    # Rust backend
+├── backend/                    # Rust backend (metadata only)
 │   ├── src/
 │   │   ├── main.rs            # Entry point, server setup
 │   │   ├── lib.rs             # Library exports
 │   │   ├── api/               # REST endpoints
 │   │   │   ├── mod.rs
+│   │   │   ├── server.rs      # Axum server config
+│   │   │   ├── types.rs       # Request/response types
 │   │   │   └── wallet.rs      # Wallet CRUD endpoints
-│   │   ├── core/              # Core cryptography
-│   │   │   ├── mod.rs
-│   │   │   ├── mnemonic.rs    # BIP39 implementation
-│   │   │   ├── hd_wallet.rs   # BIP32/44 derivation
-│   │   │   └── encryption.rs  # AES-256-GCM
 │   │   └── database/          # SQLite persistence
 │   │       ├── mod.rs
-│   │       └── wallet_store.rs
-│   ├── Cargo.toml
-│   └── tests/
+│   │       ├── connection.rs  # Database pool
+│   │       ├── models.rs      # Data models
+│   │       ├── wallet.rs      # Wallet CRUD
+│   │       └── wallet_address.rs # Address CRUD
+│   └── Cargo.toml
 ├── frontend/                   # Next.js frontend
 │   ├── src/
 │   │   ├── app/               # Next.js pages
@@ -214,7 +214,10 @@ crypto-wallet/
 │   │   └── lib/               # Utilities & state
 │   ├── package.json
 │   └── public/
-├── Crypto-Wallet-Design-Doc.md # Detailed design document
+├── documentations/             # Project documentation
+│   ├── Crypto-Wallet-Design-Doc.md
+│   ├── implementation-logs/   # Task implementation logs
+│   └── testing/               # Testing guides
 └── README.md
 ```
 
