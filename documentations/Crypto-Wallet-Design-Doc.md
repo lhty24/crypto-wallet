@@ -170,14 +170,17 @@ Build a functional multi-chain cryptocurrency wallet from scratch. The wallet wi
 - Rich cryptocurrency ecosystem
 - Secure by default with compiler guarantees
 
-**Key Crates**:
+**Key Crates** (Metadata-only backend):
 
 - **axum**: Modern web framework
-- **bip39**: Mnemonic phrase generation
-- **bitcoin**: HD wallet and key derivation
-- **secp256k1**: ECDSA signing for Ethereum
-- **ed25519-dalek**: Signatures for Solana
-- **aes-gcm**: Encryption for key storage
+- **sqlx**: Async SQLite database
+- **tokio**: Async runtime
+- **serde/serde_json**: JSON serialization
+- **tower-http**: CORS, tracing, rate limiting
+- **uuid**: Wallet ID generation
+
+> **Note:** Crypto crates (bip39, bitcoin, secp256k1, ed25519-dalek, aes-gcm) removed in T6.
+> All cryptographic operations are frontend-only per non-custodial architecture.
 
 ### Storage Strategy
 
@@ -364,32 +367,36 @@ interface WalletState {
 
 ### Backend Components (Rust)
 
-#### Project Structure
+#### Project Structure (Current - Post T6 Refactor)
 
 ```rust
 src/
-├── api/                   // REST API endpoints
-│   ├── wallet.rs         // Wallet management endpoints
-│   ├── transactions.rs   // Transaction endpoints
-│   ├── accounts.rs       // Account management
-│   └── tokens.rs         // Token operations
-├── core/                 // Core business logic
-│   ├── wallet/           // HD wallet implementation
-│   ├── chains/           // Blockchain abstractions
-│   └── transactions/     // Transaction building/signing
-├── storage/              // Data persistence
-│   ├── database.rs       // SQLite database
-│   ├── cache.rs          // Redis caching
-│   └── encryption.rs     // Storage encryption
-├── services/             // External service integrations
-│   ├── rpc_client.rs     // Blockchain RPC clients
-│   ├── price_feed.rs     // Token price feeds
-│   └── notification.rs   // WebSocket notifications
+├── api/                       // REST API endpoints
+│   ├── mod.rs                // Module exports
+│   ├── server.rs             // Axum server configuration
+│   ├── types.rs              // Request/response types
+│   └── wallet.rs             // Wallet CRUD endpoints
+├── database/                  // SQLite persistence
+│   ├── mod.rs                // Module exports
+│   ├── connection.rs         // Database pool
+│   ├── models.rs             // Data models (Wallet, WalletAddress)
+│   ├── wallet.rs             // Wallet CRUD operations
+│   └── wallet_address.rs     // Address CRUD operations
+├── lib.rs                     // Library exports
+└── main.rs                    // Entry point
 ```
+
+> **Note:** No `core/` directory. All cryptographic functionality (mnemonic generation,
+> HD wallet derivation, encryption) is handled by the frontend per non-custodial design.
 
 #### Key Implementations
 
-**HD Wallet Core**:
+> **⚠️ Architecture Note:** The following code examples represent **frontend** implementations.
+> Per the non-custodial design, all cryptographic operations (HD wallet, transactions, encryption)
+> are handled client-side in TypeScript/JavaScript. The backend only stores metadata and provides
+> blockchain query services.
+
+**HD Wallet Core** (Frontend - TypeScript/conceptual):
 
 ```rust
 pub struct HDWallet {
@@ -453,11 +460,14 @@ impl EncryptedKeystore {
 
 **Backend Tasks**:
 
-- [ ] Initialize Rust project with Cargo
-- [ ] Set up core dependencies (bip39, bitcoin, secp256k1)
-- [ ] Implement BIP39 mnemonic generation and validation
-- [ ] Implement BIP32/BIP44 key derivation
-- [ ] Create basic encryption/decryption for key storage
+- [x] Initialize Rust project with Cargo ✅
+- [x] ~~Set up core dependencies (bip39, bitcoin, secp256k1)~~ → Removed in T6 (non-custodial)
+- [x] ~~Implement BIP39 mnemonic generation and validation~~ → Moved to frontend (non-custodial)
+- [x] ~~Implement BIP32/BIP44 key derivation~~ → Moved to frontend (non-custodial)
+- [x] ~~Create basic encryption/decryption for key storage~~ → Moved to frontend (non-custodial)
+
+> **Note:** Week 1 backend crypto tasks were initially implemented, then refactored out in Week 2 T6
+> to align with non-custodial architecture. All crypto operations now happen on frontend.
 
 **Frontend Tasks**:
 
@@ -481,23 +491,24 @@ impl EncryptedKeystore {
 
 **Backend Tasks**:
 
-- [ ] Set up Axum web server ✅ (Already completed)
-- [ ] Implement simplified wallet metadata-only API endpoints
-  - [ ] Remove sensitive data (passwords, mnemonics) from create/import endpoints
-  - [ ] Simplify request structures to metadata-only
-  - [ ] Update response structures for non-custodial model
-- [ ] Add basic SQLite database for wallet metadata ✅ (Already completed)
-- [ ] Implement wallet management endpoints
-  - [ ] GET /wallets - List user's wallet metadata
-  - [ ] POST /wallet/{id}/addresses - Register derived addresses from frontend
-  - [ ] Wallet metadata CRUD operations (no sensitive data)
-- [ ] Create foundation for blockchain service endpoints
-  - [ ] GET /wallet/{id}/balance - Balance checking for registered addresses
-  - [ ] GET /wallet/{id}/transactions - Transaction history
-  - [ ] POST /wallet/{id}/broadcast - Broadcast signed transactions (future)
-- [ ] Remove all mnemonic generation and encryption from backend
-  - [ ] Clean up unused mnemonic handling code
-  - [ ] Ensure zero sensitive data processing
+- [x] T1: Set up Axum web server ✅
+- [x] T2: Implement simplified wallet metadata-only API endpoints ✅
+  - [x] Remove sensitive data (passwords, mnemonics) from create/import endpoints
+  - [x] Simplify request structures to metadata-only
+  - [x] Update response structures for non-custodial model
+- [x] T3: Add basic SQLite database for wallet metadata ✅
+- [x] T4: Implement wallet management endpoints ✅
+  - [x] GET /wallets - List user's wallet metadata
+  - [x] POST /wallet/{id}/addresses - Register derived addresses from frontend
+  - [x] Wallet metadata CRUD operations (no sensitive data)
+- [x] T5: Create foundation for blockchain service endpoints ✅
+  - [x] GET /wallet/{id}/balance - Balance checking (mock data, ready for blockchain API)
+  - [x] GET /wallet/{id}/transactions - Transaction history (mock data)
+  - [x] POST /wallet/{id}/broadcast - Broadcast signed transactions (mock, ready for integration)
+- [x] T6: Remove all mnemonic generation and encryption from backend ✅
+  - [x] Deleted `src/core/` directory (~2000 lines of crypto code)
+  - [x] Removed 9 crypto dependencies from Cargo.toml
+  - [x] Deleted obsolete `tests/` directory
 
 **Frontend Tasks**:
 
