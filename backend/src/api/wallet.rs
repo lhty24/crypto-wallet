@@ -310,27 +310,27 @@ pub async fn register_wallet(
     Ok(ResponseJson(wallet_response))
 }
 
-// GET /wallet/{id}/balance handler
-pub async fn get_wallet_balance(
-    State(pool): State<DbPool>,
-    Path(wallet_id): Path<String>,
-) -> Result<ResponseJson<WalletBalanceResponse>, StatusCode> {
-    // 1. Verify wallet exists
-    let _wallet = database::get_wallet_by_id(&pool, &wallet_id)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to check wallet existence: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?
-        .ok_or_else(|| {
-            tracing::warn!(
-                "Attempt to get balance for non-existent wallet: {}",
-                wallet_id
-            );
-            StatusCode::NOT_FOUND
-        })?;
+// ============================================================================
+// Blockchain Service Endpoints (Task 5)
+// ============================================================================
 
-    // 2. Query database for all addresses registered to this wallet
+/// GET /wallet/{id}/balance - Retrieve balances for all registered addresses
+///
+/// Returns mock balance data (0.0) for now. Real blockchain RPC integration
+/// will be added in a future task to fetch actual balances from networks.
+///
+/// # Response
+/// - 200: WalletBalanceResponse with balances array
+/// - 404: Wallet not found
+/// - 500: Database error
+pub async fn get_wallet_balance(
+    State(pool): State<DbPool>,       // Database connection pool from app state
+    Path(wallet_id): Path<String>,    // Extract {id} from URL path
+) -> Result<ResponseJson<WalletBalanceResponse>, StatusCode> {
+    // 1. Verify wallet exists (returns 404 if not found)
+    verify_wallet_exists(&pool, &wallet_id).await?;
+
+    // 2. Fetch all addresses registered to this wallet from database
     let addresses = database::get_wallet_addresses(&pool, &wallet_id)
         .await
         .map_err(|e| {
@@ -338,18 +338,19 @@ pub async fn get_wallet_balance(
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
-    // 3. For each address, create mock balance data (real RPC integration comes later)
+    // 3. Transform database records into API response format
+    // TODO: Replace mock balance with real RPC calls to blockchain nodes
     let timestamp = chrono::Utc::now().to_rfc3339();
     let balances: Vec<AddressBalance> = addresses
-        .into_iter()
-        .map(|addr| AddressBalance {
+        .into_iter()                          // Take ownership of vec elements
+        .map(|addr| AddressBalance {          // Transform each WalletAddress -> AddressBalance
             address: addr.address,
-            chain: addr.chain.clone(),
-            balance: "0.0".to_string(), // Mock balance - real RPC integration later
-            symbol: chain_to_symbol(&addr.chain),
-            timestamp: timestamp.clone(),
+            chain: addr.chain.clone(),        // Clone needed: chain used twice
+            balance: "0.0".to_string(),       // Mock: real RPC integration later
+            symbol: chain_to_symbol(&addr.chain), // Convert "ethereum" -> "ETH"
+            timestamp: timestamp.clone(),     // Same timestamp for all in batch
         })
-        .collect();
+        .collect();                           // Collect iterator into Vec
 
     tracing::info!(
         "Retrieved {} balances for wallet {}",
@@ -357,12 +358,97 @@ pub async fn get_wallet_balance(
         wallet_id
     );
 
-    // 4. Return WalletBalanceResponse with all balances
     Ok(ResponseJson(WalletBalanceResponse {
         wallet_id,
         balances,
     }))
 }
+
+/// GET /wallet/{id}/transactions - Retrieve transaction history for a wallet
+///
+/// Returns empty transaction list for now. Real blockchain RPC integration
+/// will query transaction history for all registered addresses.
+///
+/// # Response
+/// - 200: WalletTransactionResponse with transactions array
+/// - 404: Wallet not found
+/// - 500: Database error
+pub async fn get_transaction_history(
+    State(pool): State<DbPool>,
+    Path(wallet_id): Path<String>,
+) -> Result<ResponseJson<WalletTransactionResponse>, StatusCode> {
+    // 1. Verify wallet exists (returns 404 if not found)
+    verify_wallet_exists(&pool, &wallet_id).await?;
+
+    // 2. TODO: Fetch transactions from blockchain for all registered addresses
+    // Will need to query each chain's RPC/API for transaction history
+    // For now, return empty list as placeholder
+    let transactions: Vec<Transaction> = vec![];
+
+    tracing::info!(
+        "Retrieved {} transactions for wallet {}",
+        transactions.len(),
+        wallet_id
+    );
+
+    Ok(ResponseJson(WalletTransactionResponse {
+        wallet_id,
+        transactions,
+    }))
+}
+
+/// POST /wallet/{id}/broadcast - Broadcast a signed transaction to the blockchain
+///
+/// Accepts a hex-encoded signed transaction from the frontend and broadcasts it
+/// to the appropriate blockchain network. Currently returns mock response.
+///
+/// # Request Body
+/// ```json
+/// { "signed_tx": "0xf86c...", "chain": "ethereum" }
+/// ```
+///
+/// # Response
+/// - 200: BroadcastTransactionResponse with tx_hash
+/// - 400: Invalid chain or empty signed_tx
+/// - 404: Wallet not found
+/// - 500: Database or broadcast error
+pub async fn broadcast_transaction(
+    State(pool): State<DbPool>,
+    Path(wallet_id): Path<String>,
+    Json(request): Json<BroadcastTransactionRequest>, // Axum auto-parses JSON body
+) -> Result<ResponseJson<BroadcastTransactionResponse>, StatusCode> {
+    // 1. Verify wallet exists (returns 404 if not found)
+    verify_wallet_exists(&pool, &wallet_id).await?;
+
+    // 2. Validate request: chain must be supported, signed_tx must not be empty
+    if let Err(error_msg) = validate_broadcast_request(&request) {
+        tracing::warn!("Broadcast validation failed: {}", error_msg);
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    // 3. Generate mock transaction hash (real RPC broadcast comes later)
+    // TODO: Replace with actual blockchain RPC calls:
+    //   - Ethereum: eth_sendRawTransaction
+    //   - Bitcoin: sendrawtransaction
+    //   - Solana: sendTransaction
+    let mock_tx_hash = format!("0x{}", Uuid::new_v4().to_string().replace("-", ""));
+
+    tracing::info!(
+        "Broadcast transaction for wallet {} on chain {}: {}",
+        wallet_id,
+        request.chain,
+        mock_tx_hash
+    );
+
+    Ok(ResponseJson(BroadcastTransactionResponse {
+        tx_hash: mock_tx_hash,
+        chain: request.chain,
+        status: "pending".to_string(),
+        message: "Transaction broadcast queued (mock)".to_string(),
+    }))
+}
+
+// Helper functions below
 
 fn validate_create_request(request: &CreateWalletRequest) -> Result<(), String> {
     if request.name.trim().is_empty() {
@@ -424,12 +510,76 @@ fn validate_address_request(request: &RegisterAddressRequest) -> Result<(), Stri
     Ok(())
 }
 
-// Helper: Convert chain name to token symbol
+/// Verify that a wallet exists in the database.
+///
+/// This is an async helper function that checks wallet existence and returns
+/// appropriate HTTP status codes. Used by multiple handlers to avoid code duplication.
+///
+/// # Arguments
+/// * `pool` - Database connection pool (borrowed, not extracted)
+/// * `wallet_id` - The wallet UUID to check
+///
+/// # Returns
+/// * `Ok(())` - Wallet exists
+/// * `Err(404)` - Wallet not found
+/// * `Err(500)` - Database error
+///
+/// # Note on the `?` operator
+/// The `?` returns from THIS function, not the caller. The caller must also
+/// use `?` or handle the Result to propagate errors to Axum.
+async fn verify_wallet_exists(pool: &DbPool, wallet_id: &str) -> Result<(), StatusCode> {
+    database::get_wallet_by_id(pool, wallet_id)
+        .await
+        .map_err(|e| {                              // Convert anyhow::Error -> StatusCode
+            tracing::error!("Failed to check wallet existence: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?                                          // Early return if database error
+        .ok_or_else(|| {                            // Convert Option<Wallet> -> Result
+            tracing::warn!("Wallet not found: {}", wallet_id);
+            StatusCode::NOT_FOUND
+        })?;                                         // Early return if wallet not found
+
+    Ok(())
+}
+
+/// Validate broadcast transaction request.
+///
+/// Checks that:
+/// - signed_tx is not empty (would fail on blockchain)
+/// - chain is one of our supported chains
+///
+/// # Returns
+/// * `Ok(())` - Request is valid
+/// * `Err(String)` - Validation error message
+fn validate_broadcast_request(request: &BroadcastTransactionRequest) -> Result<(), String> {
+    // Reject empty transactions
+    if request.signed_tx.trim().is_empty() {
+        return Err("Signed transaction cannot be empty.".to_string());
+    }
+
+    // Check chain is supported (case-insensitive)
+    let supported_chains = ["bitcoin", "ethereum", "solana"];
+    // .to_lowercase() returns String, .as_str() borrows as &str
+    // & prefix creates &&str which .contains() expects
+    if !supported_chains.contains(&request.chain.to_lowercase().as_str()) {
+        return Err(format!("Unsupported chain: {}", request.chain));
+    }
+
+    Ok(())
+}
+
+/// Convert blockchain name to its native token symbol.
+///
+/// # Examples
+/// - "ethereum" -> "ETH"
+/// - "bitcoin" -> "BTC"
+/// - "solana" -> "SOL"
+/// - "unknown" -> "UNKNOWN" (uppercase fallback)
 fn chain_to_symbol(chain: &str) -> String {
-    match chain.to_lowercase().as_str() {
+    match chain.to_lowercase().as_str() {  // Normalize to lowercase for matching
         "ethereum" => "ETH".to_string(),
         "bitcoin" => "BTC".to_string(),
         "solana" => "SOL".to_string(),
-        _ => chain.to_uppercase(),
+        _ => chain.to_uppercase(),          // Default: just uppercase the chain name
     }
 }
