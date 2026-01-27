@@ -166,6 +166,7 @@ Build a functional multi-chain cryptocurrency wallet from scratch. The wallet wi
 **Role**: Metadata Cache and API Aggregator
 
 The backend does NOT proxy real-time blockchain queries. Instead, it focuses on:
+
 - **Metadata Storage**: Wallet names, address labels, user preferences
 - **Historical Data Indexing**: Transaction history (on-demand, not proactive)
 - **API Aggregation**: Token lists, price feeds from multiple sources
@@ -294,20 +295,21 @@ The backend does NOT proxy real-time blockchain queries. Instead, it focuses on:
 
 To avoid state drift and the "Double RPC Problem" (both frontend and backend querying blockchain for the same data), we use a clear separation of RPC responsibilities:
 
-| Operation | Responsibility | Rationale |
-|-----------|---------------|-----------|
-| **TX Broadcast** | Frontend → RPC | Must be real-time, user-initiated |
-| **Current Balance** | Frontend → RPC | Real-time accuracy required |
-| **Gas Estimation** | Frontend → RPC | Must reflect current network state |
-| **Nonce Query** | Frontend → RPC | Must be current for TX signing |
-| **TX History** | Frontend → Backend | Backend indexes and caches |
-| **Token Discovery** | Frontend → Backend | Backend aggregates token lists |
-| **Address Metadata** | Frontend → Backend | Labels, notes, categories |
-| **Price Data** | Frontend → Backend | Backend aggregates price feeds |
+| Operation            | Responsibility     | Rationale                          |
+| -------------------- | ------------------ | ---------------------------------- |
+| **TX Broadcast**     | Frontend → RPC     | Must be real-time, user-initiated  |
+| **Current Balance**  | Frontend → RPC     | Real-time accuracy required        |
+| **Gas Estimation**   | Frontend → RPC     | Must reflect current network state |
+| **Nonce Query**      | Frontend → RPC     | Must be current for TX signing     |
+| **TX History**       | Frontend → Backend | Backend indexes and caches         |
+| **Token Discovery**  | Frontend → Backend | Backend aggregates token lists     |
+| **Address Metadata** | Frontend → Backend | Labels, notes, categories          |
+| **Price Data**       | Frontend → Backend | Backend aggregates price feeds     |
 
 **Key Insight**: The frontend handles all "write" operations and real-time queries directly with the blockchain RPC. The backend serves as a **Metadata Cache and API Aggregator** for historical data and enriched information.
 
 **Benefits**:
+
 - No state drift from duplicate blockchain queries
 - Frontend has authoritative real-time data for transaction signing
 - Backend can focus on indexing, caching, and aggregation
@@ -357,7 +359,7 @@ src/
 
 ```typescript
 interface WalletState {
-  // Core State  
+  // Core State
   isUnlocked: boolean;
   currentWallet: EncryptedWallet | null;
   currentAccount: Account | null;
@@ -385,12 +387,15 @@ interface WalletState {
   encryptMnemonic: (mnemonic: string, password: string) => EncryptedWallet;
   decryptMnemonic: (wallet: EncryptedWallet, password: string) => string;
   deriveKeys: (mnemonic: string, chain: SupportedChain) => PrivateKey[];
-  signTransaction: (tx: UnsignedTransaction, privateKey: PrivateKey) => SignedTransaction;
-  
+  signTransaction: (
+    tx: UnsignedTransaction,
+    privateKey: PrivateKey
+  ) => SignedTransaction;
+
   // Storage Actions
   saveWalletLocally: (wallet: EncryptedWallet) => void;
   loadLocalWallets: () => EncryptedWallet[];
-  
+
   // Backend Actions (Metadata Only)
   registerWallet: (name: string) => Promise<string>; // Returns wallet_id
   registerAddresses: (walletId: string, addresses: string[]) => Promise<void>;
@@ -546,15 +551,15 @@ impl EncryptedKeystore {
 
 **Frontend Tasks**:
 
-- [ ] Implement client-side cryptographic functionality
-  - [ ] Client-side mnemonic generation (BIP39)
-  - [ ] Password-based encryption system (AES-256-GCM + Argon2)
-  - [ ] HD wallet derivation (BIP32/BIP44) for address generation
-  - [ ] Secure memory management and cleanup
-- [ ] Build secure local storage management
-  - [ ] Encrypted mnemonic storage in IndexedDB
-  - [ ] Wallet unlock/lock session management
-  - [ ] Auto-timeout and security features
+- [x] Implement client-side cryptographic functionality
+  - [x] Client-side mnemonic generation (BIP39)
+  - [x] Password-based encryption system (AES-256-GCM + Argon2)
+  - [x] HD wallet derivation (BIP32/BIP44) for address generation
+  - [x] Secure memory management and cleanup
+- [x] Build secure client-side storage management
+  - [x] Encrypted mnemonic storage in IndexedDB
+  - [x] Wallet operations (create, import, unlock, lock, delete)
+  - [x] Auto-timeout and security features
 - [ ] Implement API client for metadata-only backend communication
 - [ ] Create wallet creation/import UI with client-side crypto
   - [ ] Mnemonic generation and display
@@ -764,7 +769,7 @@ impl EncryptedKeystore {
 - **Local storage only** - Encrypted mnemonics stored in browser localStorage
 - **No server-side custody** - Backend handles only metadata and blockchain services
 
-#### 2. Private Key Protection 
+#### 2. Private Key Protection
 
 - **Never log private keys** - Not even in development environments
 - **Secure random generation** - Use Web Crypto API or crypto-js with secure entropy
@@ -1061,14 +1066,16 @@ test("complete wallet setup and transaction flow", async ({ page }) => {
 - **Regulatory Clarity**: No custody responsibilities or compliance requirements
 
 **Implementation Details**:
+
 - **Frontend Responsibilities**: Mnemonic generation, encryption, private key derivation, transaction signing
 - **Backend Responsibilities**: Metadata storage, blockchain services, address monitoring
 - **Storage Model**: Encrypted mnemonics in client localStorage, metadata only in backend database
 - **Security Flow**: Password → Argon2 → AES-256-GCM encryption → Local storage
 
 **Trade-offs Considered**:
+
 - **Complexity**: Increased frontend cryptographic complexity vs simplified backend
-- **Recovery**: No backend-assisted recovery vs user-controlled backup responsibility  
+- **Recovery**: No backend-assisted recovery vs user-controlled backup responsibility
 - **UX**: Password requirements vs convenience of custodial solutions
 - **Support**: Users responsible for key management vs backend-assisted recovery
 
@@ -1173,30 +1180,36 @@ test("complete wallet setup and transaction flow", async ({ page }) => {
 Items deferred from the current design for future consideration:
 
 #### Proactive Blockchain Indexing
+
 **Current**: On-demand indexing - backend fetches TX history when requested
 **Future**: Proactive indexing with background jobs that monitor registered addresses
 
 Benefits of proactive indexing:
+
 - Faster history retrieval (pre-indexed)
 - Real-time notifications for incoming transactions
 - Better analytics and reporting capabilities
 
 Trade-offs:
+
 - Increased backend complexity
 - Higher infrastructure costs (continuous RPC polling)
 - Rate limit management with RPC providers
 
 #### Backend WebSocket Relay for Multi-Chain
+
 **Current**: Frontend connects directly to each chain's RPC/WebSocket
 **Future**: Backend acts as WebSocket relay/multiplexer
 
 Benefits of backend relay:
+
 - Single WebSocket connection from frontend
 - Backend handles multi-chain connection management
 - Better for mobile (battery, connection limits)
 - Centralized rate limiting and caching
 
 Trade-offs:
+
 - Added latency through backend hop
 - Backend becomes critical path for real-time data
 - More complex backend infrastructure
