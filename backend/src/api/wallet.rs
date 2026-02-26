@@ -28,14 +28,6 @@ pub struct UpdateWalletRequest {
     name: String, // New wallet name
 }
 
-// Response structure for delete operation
-#[derive(Serialize)]
-pub struct DeleteWalletResponse {
-    wallet_id: String,
-    message: String,
-    deleted: bool,
-}
-
 // Success response for both endpoints
 #[derive(Serialize)]
 pub struct WalletResponse {
@@ -43,6 +35,14 @@ pub struct WalletResponse {
     name: String,       // Wallet name
     created_at: String, // ISO timestamp
     message: String,
+}
+
+// Response structure for delete operation
+#[derive(Serialize)]
+pub struct DeleteWalletResponse {
+    wallet_id: String,
+    message: String,
+    deleted: bool,
 }
 
 // Request structure for address registration
@@ -324,8 +324,8 @@ pub async fn register_wallet(
 /// - 404: Wallet not found
 /// - 500: Database error
 pub async fn get_wallet_balance(
-    State(pool): State<DbPool>,       // Database connection pool from app state
-    Path(wallet_id): Path<String>,    // Extract {id} from URL path
+    State(pool): State<DbPool>,    // Database connection pool from app state
+    Path(wallet_id): Path<String>, // Extract {id} from URL path
 ) -> Result<ResponseJson<WalletBalanceResponse>, StatusCode> {
     // 1. Verify wallet exists (returns 404 if not found)
     verify_wallet_exists(&pool, &wallet_id).await?;
@@ -342,15 +342,16 @@ pub async fn get_wallet_balance(
     // TODO: Replace mock balance with real RPC calls to blockchain nodes
     let timestamp = chrono::Utc::now().to_rfc3339();
     let balances: Vec<AddressBalance> = addresses
-        .into_iter()                          // Take ownership of vec elements
-        .map(|addr| AddressBalance {          // Transform each WalletAddress -> AddressBalance
+        .into_iter() // Take ownership of vec elements
+        .map(|addr| AddressBalance {
+            // Transform each WalletAddress -> AddressBalance
             address: addr.address,
-            chain: addr.chain.clone(),        // Clone needed: chain used twice
-            balance: "0.0".to_string(),       // Mock: real RPC integration later
+            chain: addr.chain.clone(),  // Clone needed: chain used twice
+            balance: "0.0".to_string(), // Mock: real RPC integration later
             symbol: chain_to_symbol(&addr.chain), // Convert "ethereum" -> "ETH"
-            timestamp: timestamp.clone(),     // Same timestamp for all in batch
+            timestamp: timestamp.clone(), // Same timestamp for all in batch
         })
-        .collect();                           // Collect iterator into Vec
+        .collect(); // Collect iterator into Vec
 
     tracing::info!(
         "Retrieved {} balances for wallet {}",
@@ -530,14 +531,16 @@ fn validate_address_request(request: &RegisterAddressRequest) -> Result<(), Stri
 async fn verify_wallet_exists(pool: &DbPool, wallet_id: &str) -> Result<(), StatusCode> {
     database::get_wallet_by_id(pool, wallet_id)
         .await
-        .map_err(|e| {                              // Convert anyhow::Error -> StatusCode
+        .map_err(|e| {
+            // Convert anyhow::Error -> StatusCode
             tracing::error!("Failed to check wallet existence: {:?}", e);
             StatusCode::INTERNAL_SERVER_ERROR
-        })?                                          // Early return if database error
-        .ok_or_else(|| {                            // Convert Option<Wallet> -> Result
+        })? // Early return if database error
+        .ok_or_else(|| {
+            // Convert Option<Wallet> -> Result
             tracing::warn!("Wallet not found: {}", wallet_id);
             StatusCode::NOT_FOUND
-        })?;                                         // Early return if wallet not found
+        })?; // Early return if wallet not found
 
     Ok(())
 }
@@ -576,10 +579,11 @@ fn validate_broadcast_request(request: &BroadcastTransactionRequest) -> Result<(
 /// - "solana" -> "SOL"
 /// - "unknown" -> "UNKNOWN" (uppercase fallback)
 fn chain_to_symbol(chain: &str) -> String {
-    match chain.to_lowercase().as_str() {  // Normalize to lowercase for matching
+    match chain.to_lowercase().as_str() {
+        // Normalize to lowercase for matching
         "ethereum" => "ETH".to_string(),
         "bitcoin" => "BTC".to_string(),
         "solana" => "SOL".to_string(),
-        _ => chain.to_uppercase(),          // Default: just uppercase the chain name
+        _ => chain.to_uppercase(), // Default: just uppercase the chain name
     }
 }
