@@ -1,0 +1,61 @@
+[package]
+name = "crypto-wallet-backend"
+version = "0.1.0"
+edition = "2021"
+authors = ["Crypto Wallet Developer"]
+license = "MIT"
+description = "Multi-chain non-custodial cryptocurrency wallet backend"
+
+# Security-focused compilation profiles
+[profile.release]
+# Link-time optimization - optimizes across all crates for better performance and smaller binaries
+lto = true
+# Single codegen unit for better optimization (slower compile, better runtime performance)
+codegen-units = 1
+# Abort on panic instead of unwinding - smaller binary, faster execution
+panic = "abort"
+# Remove debug symbols in release for smaller binary
+strip = true
+# Optimize for performance
+opt-level = 3
+
+[profile.dev]
+# Keep debug info for development and testing
+debug = true
+# Faster compilation for development
+opt-level = 0
+
+[dependencies]
+# === Utilities ===
+# Convert between hex, binary, and other formats
+hex = "0.4" 
+# Generate unique identifiers for wallets/accounts
+uuid = { version = "1.6", features = ["v4", "serde"] }
+# Serialization/deserialization for data storage
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# === Async Runtime ===
+# Required for future API endpoints and async operations
+tokio = { version = "1.0", features = ["full"] }
+
+# === Error Handling ===
+# Professional error handling for crypto operations
+anyhow = "1.0"     # Simple error handling with context
+
+axum = "0.8.7"
+tower = "0.5.2"
+tower-http = { version = "0.6.7", features = ["cors", "trace", "limit"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+chrono = "0.4"
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "macros"] }
+dotenv = "0.15.0"
+
+# Development dependencies for testing
+[dev-dependencies]
+tokio-test = "0.4"
+tempfile = "3.8"    # For temporary file testing
+chrono = "0.4"      # For timestamp handling in tests
+
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "chrono", "uuid"] }
