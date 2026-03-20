@@ -1,0 +1,44 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        UPDATE wallets\n        SET name = ?, updated_at = ?\n        WHERE wallet_id = ?\n        RETURNING id, name, wallet_id, created_at, updated_at\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Int64"
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "wallet_id",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "updated_at",
+        "ordinal": 4,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "71ee16a1220429e8f8a345d2ca723ca29debaf62206c3d0cbfb9400c5e6f8ffa"
+}
