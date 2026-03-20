@@ -163,12 +163,21 @@ Build a functional multi-chain cryptocurrency wallet from scratch. The wallet wi
 
 ### Backend: Rust + Axum ✅
 
+**Role**: Metadata Cache and API Aggregator
+
+The backend does NOT proxy real-time blockchain queries. Instead, it focuses on:
+
+- **Metadata Storage**: Wallet names, address labels, user preferences
+- **Historical Data Indexing**: Transaction history (on-demand, not proactive)
+- **API Aggregation**: Token lists, price feeds from multiple sources
+- **Caching**: Reduce frontend API calls for non-real-time data
+
 **Rationale**:
 
-- Memory safety for crypto operations
-- Performance for cryptographic computations
-- Rich cryptocurrency ecosystem
+- Memory safety for data processing
+- Performance for caching and aggregation
 - Secure by default with compiler guarantees
+- Simplified scope: no blockchain RPC proxying
 
 **Key Crates** (Metadata-only backend):
 
@@ -184,11 +193,15 @@ Build a functional multi-chain cryptocurrency wallet from scratch. The wallet wi
 
 ### Storage Strategy
 
-- **Development**: Encrypted local storage
+- **Client-Side Storage**: IndexedDB for encrypted wallet data
+  - Better binary data handling (Uint8Array natively)
+  - Async API (non-blocking UI)
+  - Larger storage limits than localStorage
+  - Structured object stores for different data types
 - **Production Considerations**:
   - Hardware Security Modules (HSM)
-  - Encrypted browser storage with user-derived keys
-  - Server-side encrypted storage with authentication
+  - Hardware wallet integration for key management
+  - Web Workers for isolated crypto operations
 
 ---
 
@@ -215,13 +228,13 @@ Build a functional multi-chain cryptocurrency wallet from scratch. The wallet wi
 │ │ - Settings          ││ │ - Solana (Ed25519)│  │ └──────────────────────────┘ │
 │ └─────────────────────┘│ └───────────────────┘  │                              │
 └─────────────────────────────────────────────────────────────────────────────────┘
-│                               CLIENT STORAGE                                   │
+│                               CLIENT STORAGE (IndexedDB)                      │
 │ ┌─────────────────────────────────────────────────────────────────────────────┐ │
-│ │ Browser localStorage/IndexedDB                                              │ │
+│ │ IndexedDB Database: "crypto-wallet"                                         │ │
 │ │ ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────────────────────┐ │ │
 │ │ │ Encrypted Wallets│ │ User Preferences│ │ Session Data                    │ │ │
 │ │ │ - AES-256 Blob   │ │ - UI Settings   │ │ - Unlocked Wallet IDs           │ │ │
-│ │ │ - Salt & IV      │ │ - Network Prefs │ │ - Auto-lock Timers              │ │ │
+│ │ │ - Salt & Nonce   │ │ - Network Prefs │ │ - Auto-lock Timers              │ │ │
 │ │ │ - Wallet Metadata│ │ - Theme         │ │ - Temporary State               │ │ │
 │ │ └─────────────────┘ └─────────────────┘ └─────────────────────────────────┘ │ │
 │ └─────────────────────────────────────────────────────────────────────────────┐ │
@@ -234,25 +247,24 @@ Build a functional multi-chain cryptocurrency wallet from scratch. The wallet wi
                                       │
 ┌─────────────────────────────────────────────────────────────────────────────────┐
 │                               BACKEND LAYER                                     │
-│                              (Rust + Axum)                                     │
+│                    (Rust + Axum - Metadata Cache & API Aggregator)             │
 ├─────────────────────────────────────────────────────────────────────────────────┤
-│ API Layer              │ Blockchain Services    │ Blockchain Clients          │
+│ API Layer              │ Data Services          │ External APIs               │
 │ ┌─────────────────────┐│ ┌───────────────────┐  │ ┌──────────────────────────┐ │
-│ │ Metadata Endpoints  ││ │ Address Monitoring│  │ │ EVM RPC Client           │ │
-│ │ - /wallets (CRUD)   ││ │ - Balance Tracking│  │ │ - Ethereum               │ │
-│ │ - /wallet/addresses ││ │ - TX History      │  │ │ - Polygon                │ │
-│ │ - /balance          ││ │ - Token Discovery │  │ │ - Layer 2s               │ │
-│ │ - /history          ││ │ Address Registry  │  │ └──────────────────────────┘ │
-│ │ - /broadcast        ││ │ - Public Keys     │  │ ┌──────────────────────────┐ │
-│ │ - /tokens           ││ │ - Address Labels  │  │ │ Solana RPC Client        │ │
-│ │ - /gas-estimate     ││ └───────────────────┘  │ │ - JSON-RPC 2.0           │ │
-│ └─────────────────────┘│ ┌───────────────────┐  │ │ - WebSocket              │ │
-│ ┌─────────────────────┐│ │ Transaction Relay │  │ │ - Commitment Levels      │ │
-│ │ WebSocket Events    ││ │ - TX Broadcasting │  │ └──────────────────────────┘ │
-│ │ - Balance Updates   ││ │ - Gas Estimation  │  │                              │
-│ │ - TX Confirmations  ││ │ - Nonce Management│  │ ⚠️  NO PRIVATE KEYS         │
-│ │ - Price Updates     ││ │ - Status Tracking │  │ ⚠️  NO MNEMONICS            │
-│ └─────────────────────┘│ └───────────────────┘  │ ⚠️  NO PASSWORDS            │
+│ │ Metadata Endpoints  ││ │ History Indexing  │  │ │ Price Feed APIs          │ │
+│ │ - /wallets (CRUD)   ││ │ - TX History      │  │ │ - CoinGecko              │ │
+│ │ - /wallet/addresses ││ │ - On-demand fetch │  │ │ - CoinMarketCap          │ │
+│ │ - /history          ││ │ - Cache & store   │  │ └──────────────────────────┘ │
+│ │ - /tokens           ││ │ Token Discovery   │  │ ┌──────────────────────────┐ │
+│ │ - /prices           ││ │ - Token lists     │  │ │ Token List APIs          │ │
+│ └─────────────────────┘│ │ - Metadata        │  │ │ - Uniswap token list     │ │
+│ ┌─────────────────────┐│ └───────────────────┘  │ │ - Jupiter token list     │ │
+│ │ Address Registry    ││ ┌───────────────────┐  │ └──────────────────────────┘ │
+│ │ - Public addresses  ││ │ Caching Layer     │  │                              │
+│ │ - Labels & notes    ││ │ - Price cache     │  │ ⚠️  NO PRIVATE KEYS         │
+│ │ - Categories        ││ │ - Token cache     │  │ ⚠️  NO MNEMONICS            │
+│ └─────────────────────┘│ │ - History cache   │  │ ⚠️  NO PASSWORDS            │
+│                        │ └───────────────────┘  │ ⚠️  NO RPC PROXYING         │
 └─────────────────────────────────────────────────────────────────────────────────┘
                                       │
 ┌─────────────────────────────────────────────────────────────────────────────────┐
@@ -278,6 +290,30 @@ Build a functional multi-chain cryptocurrency wallet from scratch. The wallet wi
 5. **Modular Design**: Easy to add new blockchain support
 6. **Separation of Concerns**: Clear boundaries between crypto and coordination layers
 7. **Fail-Safe Defaults**: Secure configurations by default
+
+### RPC Responsibility Pattern: "Write-Direct, Read-Indexed"
+
+To avoid state drift and the "Double RPC Problem" (both frontend and backend querying blockchain for the same data), we use a clear separation of RPC responsibilities:
+
+| Operation            | Responsibility     | Rationale                          |
+| -------------------- | ------------------ | ---------------------------------- |
+| **TX Broadcast**     | Frontend → RPC     | Must be real-time, user-initiated  |
+| **Current Balance**  | Frontend → RPC     | Real-time accuracy required        |
+| **Gas Estimation**   | Frontend → RPC     | Must reflect current network state |
+| **Nonce Query**      | Frontend → RPC     | Must be current for TX signing     |
+| **TX History**       | Frontend → Backend | Backend indexes and caches         |
+| **Token Discovery**  | Frontend → Backend | Backend aggregates token lists     |
+| **Address Metadata** | Frontend → Backend | Labels, notes, categories          |
+| **Price Data**       | Frontend → Backend | Backend aggregates price feeds     |
+
+**Key Insight**: The frontend handles all "write" operations and real-time queries directly with the blockchain RPC. The backend serves as a **Metadata Cache and API Aggregator** for historical data and enriched information.
+
+**Benefits**:
+
+- No state drift from duplicate blockchain queries
+- Frontend has authoritative real-time data for transaction signing
+- Backend can focus on indexing, caching, and aggregation
+- Clear responsibility boundaries reduce bugs and complexity
 
 ---
 
@@ -323,7 +359,7 @@ src/
 
 ```typescript
 interface WalletState {
-  // Core State  
+  // Core State
   isUnlocked: boolean;
   currentWallet: EncryptedWallet | null;
   currentAccount: Account | null;
@@ -351,12 +387,15 @@ interface WalletState {
   encryptMnemonic: (mnemonic: string, password: string) => EncryptedWallet;
   decryptMnemonic: (wallet: EncryptedWallet, password: string) => string;
   deriveKeys: (mnemonic: string, chain: SupportedChain) => PrivateKey[];
-  signTransaction: (tx: UnsignedTransaction, privateKey: PrivateKey) => SignedTransaction;
-  
+  signTransaction: (
+    tx: UnsignedTransaction,
+    privateKey: PrivateKey
+  ) => SignedTransaction;
+
   // Storage Actions
   saveWalletLocally: (wallet: EncryptedWallet) => void;
   loadLocalWallets: () => EncryptedWallet[];
-  
+
   // Backend Actions (Metadata Only)
   registerWallet: (name: string) => Promise<string>; // Returns wallet_id
   registerAddresses: (walletId: string, addresses: string[]) => Promise<void>;
@@ -512,15 +551,15 @@ impl EncryptedKeystore {
 
 **Frontend Tasks**:
 
-- [ ] Implement client-side cryptographic functionality
-  - [ ] Client-side mnemonic generation (BIP39)
-  - [ ] Password-based encryption system (AES-256-GCM + Argon2)
-  - [ ] HD wallet derivation (BIP32/BIP44) for address generation
-  - [ ] Secure memory management and cleanup
-- [ ] Build secure local storage management
-  - [ ] Encrypted mnemonic storage in localStorage/IndexedDB
-  - [ ] Wallet unlock/lock session management
-  - [ ] Auto-timeout and security features
+- [x] Implement client-side cryptographic functionality
+  - [x] Client-side mnemonic generation (BIP39)
+  - [x] Password-based encryption system (AES-256-GCM + Argon2)
+  - [x] HD wallet derivation (BIP32/BIP44) for address generation
+  - [x] Secure memory management and cleanup
+- [x] Build secure client-side storage management
+  - [x] Encrypted mnemonic storage in IndexedDB
+  - [x] Wallet operations (create, import, unlock, lock, delete)
+  - [x] Auto-timeout and security features
 - [ ] Implement API client for metadata-only backend communication
 - [ ] Create wallet creation/import UI with client-side crypto
   - [ ] Mnemonic generation and display
@@ -537,6 +576,7 @@ impl EncryptedKeystore {
 - [ ] End-to-end wallet creation and import flow
 - [ ] Secure communication between frontend and backend
 - [ ] Basic error handling and user feedback
+- [ ] Remove `/broadcast` endpoint from backend (frontend broadcasts directly via RPC per Write-Direct pattern)
 
 ### Phase 2: EVM Support (Weeks 2-3)
 
@@ -544,30 +584,35 @@ impl EncryptedKeystore {
 
 **Goals**: Add full Ethereum support with balance checking and transactions
 
-**Backend Tasks**:
+**Backend Tasks** (Metadata & History Only - per Write-Direct pattern):
 
-- [ ] Integrate Ethereum RPC client
-- [ ] Add balance checking for ETH (for registered addresses)
-- [ ] Implement unsigned transaction building for ETH transfers
-- [ ] Add gas estimation logic
-- [ ] Create transaction broadcasting (receives signed tx from frontend)
-- [ ] Implement address monitoring and transaction indexing
-- [ ] Add support for multiple Ethereum networks (mainnet/testnets)
+- [ ] Implement transaction history indexing for registered addresses
+  - [ ] On-demand fetch from block explorers/indexers (Etherscan, etc.)
+  - [ ] Cache and store transaction history
+- [ ] Add token list aggregation from external sources
+- [ ] Implement price feed integration (CoinGecko, etc.)
 
-**Frontend Tasks**:
+> **Note:** Per "Write-Direct, Read-Indexed" pattern, frontend handles real-time RPC calls
+> (balance, gas estimation, nonce, broadcast) directly via Viem. Backend focuses on
+> historical data indexing and API aggregation.
+
+**Frontend Tasks** (Direct RPC via Viem):
 
 - [ ] Implement Ethereum private key derivation from mnemonic
   - [ ] BIP44 Ethereum derivation path (m/44'/60'/0'/0/x)
   - [ ] Private key generation for Ethereum accounts
   - [ ] Address generation from private keys
-- [ ] Set up Viem for Ethereum interactions
+- [ ] Set up Viem for direct Ethereum RPC interactions
+  - [ ] Configure RPC providers (Infura, Alchemy, public RPCs)
+  - [ ] Implement balance fetching (frontend → RPC)
+  - [ ] Implement gas estimation (frontend → RPC)
+  - [ ] Implement nonce management (frontend → RPC)
+  - [ ] Implement transaction broadcasting (frontend → RPC)
 - [ ] Implement client-side transaction signing
   - [ ] Sign ETH transfer transactions with private keys
-  - [ ] Manage nonce and gas parameters
   - [ ] Secure private key handling during signing
-- [ ] Implement balance fetching and display
-- [ ] Create send transaction form with gas estimation
-- [ ] Add transaction history view
+- [ ] Create send transaction form with real-time gas estimation
+- [ ] Add transaction history view (frontend → backend for cached history)
 - [ ] Implement network switching (mainnet/testnets)
 - [ ] Register derived Ethereum addresses with backend
 
@@ -583,21 +628,23 @@ impl EncryptedKeystore {
 
 **Goals**: Add ERC-20 token support and enhanced transaction features
 
-**Backend Tasks**:
+**Backend Tasks** (Token Metadata & Aggregation Only):
 
-- [ ] Implement ERC-20 token contract interactions
-- [ ] Add token balance checking (for registered addresses)
-- [ ] Implement unsigned ERC-20 transfer transaction building
-- [ ] Create token metadata fetching (symbol, decimals, name)
-- [ ] Add custom token support and token list management
+- [ ] Aggregate token lists from external sources (Uniswap, CoinGecko)
+- [ ] Cache token metadata (symbol, decimals, name, logo)
 - [ ] Implement token transaction history indexing
+- [ ] Add custom token registry for user-added tokens
 
-**Frontend Tasks**:
+> **Note:** Frontend handles token balance queries directly via Viem (ERC-20 balanceOf calls).
+> Backend provides token discovery and metadata aggregation.
 
+**Frontend Tasks** (Direct RPC for Balances):
+
+- [ ] Implement ERC-20 balance fetching via Viem (frontend → RPC)
 - [ ] Implement ERC-20 transaction signing with private keys
-- [ ] Create token list component with local storage
-- [ ] Add token balance display
-- [ ] Implement token transfer UI with gas estimation
+- [ ] Create token list component with IndexedDB caching
+- [ ] Add token balance display with real-time updates
+- [ ] Implement token transfer UI with gas estimation (frontend → RPC)
 - [ ] Create custom token addition flow
 - [ ] Add token search and filtering
 - [ ] Secure handling of token contract interactions
@@ -626,29 +673,33 @@ impl EncryptedKeystore {
 
 **Goals**: Add Solana support and create chain abstraction
 
-**Backend Tasks**:
+**Backend Tasks** (History & Token Aggregation Only):
 
-- [ ] Integrate Solana RPC client
-- [ ] Add SOL balance checking (for registered addresses)
-- [ ] Implement unsigned Solana transaction building
-- [ ] Implement SPL token support and balance checking
-- [ ] Create chain abstraction layer for multiple blockchains
-- [ ] Add Solana address monitoring and transaction indexing
+- [ ] Implement Solana transaction history indexing (on-demand)
+- [ ] Aggregate SPL token lists (Jupiter, etc.)
+- [ ] Cache Solana token metadata
 
-**Frontend Tasks**:
+> **Note:** Per "Write-Direct, Read-Indexed" pattern, frontend handles real-time Solana RPC calls
+> (balance, transaction broadcast) directly via @solana/web3.js.
+
+**Frontend Tasks** (Direct RPC via @solana/web3.js):
 
 - [ ] Implement Solana private key derivation from mnemonic
   - [ ] BIP44 Solana derivation path (m/44'/501'/0'/0')
   - [ ] Ed25519 key pair generation for Solana
   - [ ] Solana address generation from public keys
-- [ ] Integrate @solana/web3.js
+- [ ] Set up @solana/web3.js for direct Solana RPC interactions
+  - [ ] Configure RPC endpoints (mainnet, devnet)
+  - [ ] Implement SOL balance fetching (frontend → RPC)
+  - [ ] Implement SPL token balance fetching (frontend → RPC)
+  - [ ] Implement transaction broadcasting (frontend → RPC)
 - [ ] Implement client-side Solana transaction signing
   - [ ] Sign SOL transfer transactions
   - [ ] Sign SPL token transactions
   - [ ] Secure handling of Ed25519 private keys
 - [ ] Add Solana network support in UI
 - [ ] Implement chain switching interface
-- [ ] Add SPL token support
+- [ ] Add SPL token support with real-time balances
 - [ ] Create unified transaction interface for multiple chains
 - [ ] Register derived Solana addresses with backend
 
@@ -657,7 +708,7 @@ impl EncryptedKeystore {
 - [ ] Refactor frontend for multi-chain private key management
 - [ ] Create common interfaces for different chains (Ethereum/Solana)
 - [ ] Implement chain-specific configurations and derivation paths
-- [ ] Unified local storage for multi-chain encrypted wallets
+- [ ] Unified IndexedDB storage for multi-chain encrypted wallets
 
 ### Phase 5: Production Features (Weeks 5-6)
 
@@ -718,7 +769,7 @@ impl EncryptedKeystore {
 - **Local storage only** - Encrypted mnemonics stored in browser localStorage
 - **No server-side custody** - Backend handles only metadata and blockchain services
 
-#### 2. Private Key Protection 
+#### 2. Private Key Protection
 
 - **Never log private keys** - Not even in development environments
 - **Secure random generation** - Use Web Crypto API or crypto-js with secure entropy
@@ -1015,14 +1066,16 @@ test("complete wallet setup and transaction flow", async ({ page }) => {
 - **Regulatory Clarity**: No custody responsibilities or compliance requirements
 
 **Implementation Details**:
+
 - **Frontend Responsibilities**: Mnemonic generation, encryption, private key derivation, transaction signing
 - **Backend Responsibilities**: Metadata storage, blockchain services, address monitoring
 - **Storage Model**: Encrypted mnemonics in client localStorage, metadata only in backend database
 - **Security Flow**: Password → Argon2 → AES-256-GCM encryption → Local storage
 
 **Trade-offs Considered**:
+
 - **Complexity**: Increased frontend cryptographic complexity vs simplified backend
-- **Recovery**: No backend-assisted recovery vs user-controlled backup responsibility  
+- **Recovery**: No backend-assisted recovery vs user-controlled backup responsibility
 - **UX**: Password requirements vs convenience of custodial solutions
 - **Support**: Users responsible for key management vs backend-assisted recovery
 
@@ -1121,6 +1174,45 @@ test("complete wallet setup and transaction flow", async ({ page }) => {
 ---
 
 ## Future Enhancements
+
+### Architecture Backlog
+
+Items deferred from the current design for future consideration:
+
+#### Proactive Blockchain Indexing
+
+**Current**: On-demand indexing - backend fetches TX history when requested
+**Future**: Proactive indexing with background jobs that monitor registered addresses
+
+Benefits of proactive indexing:
+
+- Faster history retrieval (pre-indexed)
+- Real-time notifications for incoming transactions
+- Better analytics and reporting capabilities
+
+Trade-offs:
+
+- Increased backend complexity
+- Higher infrastructure costs (continuous RPC polling)
+- Rate limit management with RPC providers
+
+#### Backend WebSocket Relay for Multi-Chain
+
+**Current**: Frontend connects directly to each chain's RPC/WebSocket
+**Future**: Backend acts as WebSocket relay/multiplexer
+
+Benefits of backend relay:
+
+- Single WebSocket connection from frontend
+- Backend handles multi-chain connection management
+- Better for mobile (battery, connection limits)
+- Centralized rate limiting and caching
+
+Trade-offs:
+
+- Added latency through backend hop
+- Backend becomes critical path for real-time data
+- More complex backend infrastructure
 
 ### Phase 6: Advanced Features (Future)
 
