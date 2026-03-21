@@ -23,7 +23,7 @@ A secure, non-custodial multi-chain cryptocurrency wallet built with Rust (Axum)
 │  │ - HD Derivation │  │ - Balances      │  │ - History       │  │
 │  │ - TX Signing    │  │ - Transactions  │  │ - Settings      │  │
 │  └─────────────────┘  └─────────────────┘  └─────────────────┘  │
-│                               │                                  │
+│                               │                                 │
 │              Encrypted Wallets (localStorage)                   │
 └───────────────────────────────┼─────────────────────────────────┘
                                 │ HTTP API (Metadata Only)
@@ -35,7 +35,7 @@ A secure, non-custodial multi-chain cryptocurrency wallet built with Rust (Axum)
 │  │ - /addresses    │  │ - TX Broadcast  │  │ - Wallet Meta   │  │
 │  │ - /health       │  │ - Gas Estimate  │  │ - Addresses     │  │
 │  └─────────────────┘  └─────────────────┘  └─────────────────┘  │
-│                                                                  │
+│                                                                 │
 │  ⚠️  NO Private Keys  │  ⚠️  NO Mnemonics  │  ⚠️  NO Passwords  │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -44,18 +44,19 @@ A secure, non-custodial multi-chain cryptocurrency wallet built with Rust (Axum)
 
 This wallet follows a **true non-custodial architecture**:
 
-| Component | Frontend (Client) | Backend (Server) |
-|-----------|-------------------|------------------|
-| Mnemonic Generation | ✅ | ❌ |
-| Private Key Derivation | ✅ | ❌ |
-| Transaction Signing | ✅ | ❌ |
-| Encryption/Decryption | ✅ | ❌ |
-| Wallet Metadata | ✅ | ✅ |
-| Address Registration | ✅ | ✅ |
-| Balance Queries | ❌ | ✅ |
-| TX Broadcasting | ❌ | ✅ |
+| Component              | Frontend (Client) | Backend (Server) |
+| ---------------------- | ----------------- | ---------------- |
+| Mnemonic Generation    | ✅                | ❌               |
+| Private Key Derivation | ✅                | ❌               |
+| Transaction Signing    | ✅                | ❌               |
+| Encryption/Decryption  | ✅                | ❌               |
+| Wallet Metadata        | ✅                | ✅               |
+| Address Registration   | ✅                | ✅               |
+| Balance Queries        | ❌                | ✅               |
+| TX Broadcasting        | ❌                | ✅               |
 
 **Key Security Features:**
+
 - Argon2id key derivation (64MB memory, 3 iterations)
 - AES-256-GCM authenticated encryption
 - Unique salt and nonce per wallet
@@ -65,24 +66,26 @@ This wallet follows a **true non-custodial architecture**:
 ## Tech Stack
 
 ### Backend (Rust)
-| Category | Technology |
-|----------|------------|
-| Framework | Axum 0.8 |
-| Runtime | Tokio (async) |
-| Database | SQLite + sqlx |
-| Logging | tracing + tracing-subscriber |
+
+| Category  | Technology                   |
+| --------- | ---------------------------- |
+| Framework | Axum 0.8                     |
+| Runtime   | Tokio (async)                |
+| Database  | SQLite + sqlx                |
+| Logging   | tracing + tracing-subscriber |
 
 > **Note:** Backend handles metadata only. All cryptographic operations (mnemonic, encryption, signing) are performed client-side.
 
 ### Frontend (TypeScript)
-| Category | Technology |
-|----------|------------|
-| Framework | Next.js 16 (App Router) |
-| UI | React 19 + Tailwind CSS 4 |
-| State | Zustand 5 |
-| Ethereum | Viem 2.40 |
-| Solana | @solana/web3.js 1.98 |
-| Crypto | @noble/secp256k1, @noble/ed25519, @noble/hashes |
+
+| Category  | Technology                                      |
+| --------- | ----------------------------------------------- |
+| Framework | Next.js 16 (App Router)                         |
+| UI        | React 19 + Tailwind CSS 4                       |
+| State     | Zustand 5                                       |
+| Ethereum  | Viem 2.40                                       |
+| Solana    | @solana/web3.js 1.98                            |
+| Crypto    | @noble/secp256k1, @noble/ed25519, @noble/hashes |
 
 ## Getting Started
 
@@ -111,6 +114,7 @@ npm install
 ### Running the Application
 
 **Start the backend:**
+
 ```bash
 cd backend
 DATABASE_URL="sqlite://./data/wallet.db" cargo run
@@ -118,6 +122,7 @@ DATABASE_URL="sqlite://./data/wallet.db" cargo run
 ```
 
 **Start the frontend:**
+
 ```bash
 cd frontend
 npm run dev
@@ -127,12 +132,14 @@ npm run dev
 ### Environment Variables
 
 **Backend** (required):
+
 ```bash
 DATABASE_URL="sqlite://./data/wallet.db"  # SQLite database path
 PORT=8080                                  # Server port (default: 8080)
 ```
 
 **Frontend**:
+
 ```bash
 NEXT_PUBLIC_API_URL=http://localhost:8080  # Backend API URL
 ```
@@ -140,12 +147,14 @@ NEXT_PUBLIC_API_URL=http://localhost:8080  # Backend API URL
 ## API Reference
 
 ### Health Check
+
 ```
 GET /health
 Response: { "status": "healthy", "database": "connected" }
 ```
 
 ### Wallet Management
+
 ```
 GET    /wallets                    # List all wallets
 POST   /wallet/create              # Create wallet metadata
@@ -158,6 +167,7 @@ POST   /wallet/{id}/addresses      # Register derived addresses
 ### Request/Response Examples
 
 **Create Wallet:**
+
 ```bash
 curl -X POST http://localhost:8080/wallet/create \
   -H "Content-Type: application/json" \
@@ -165,6 +175,7 @@ curl -X POST http://localhost:8080/wallet/create \
 ```
 
 **Register Addresses:**
+
 ```bash
 curl -X POST http://localhost:8080/wallet/{wallet_id}/addresses \
   -H "Content-Type: application/json" \
@@ -181,11 +192,11 @@ curl -X POST http://localhost:8080/wallet/{wallet_id}/addresses \
 
 ## Blockchain Support
 
-| Chain | Curve | Derivation Path | Status |
-|-------|-------|-----------------|--------|
-| Bitcoin | secp256k1 | m/44'/0'/account'/0/0 | ✅ |
-| Ethereum | secp256k1 | m/44'/60'/account'/0/0 | ✅ |
-| Solana | Ed25519 | m/44'/501'/account'/0' | ✅ |
+| Chain    | Curve     | Derivation Path        | Status |
+| -------- | --------- | ---------------------- | ------ |
+| Bitcoin  | secp256k1 | m/44'/0'/account'/0/0  | ✅     |
+| Ethereum | secp256k1 | m/44'/60'/account'/0/0 | ✅     |
+| Solana   | Ed25519   | m/44'/501'/account'/0' | ✅     |
 
 ## Project Structure
 
@@ -262,6 +273,7 @@ npm run build
 ## Roadmap
 
 ### Phase 1: Foundation (Current)
+
 - [x] HD wallet generation (BIP39/BIP32/BIP44)
 - [x] Multi-chain account derivation
 - [x] Wallet metadata API
@@ -269,18 +281,21 @@ npm run build
 - [x] Address registration
 
 ### Phase 2: Basic Operations
+
 - [ ] Balance checking (ETH, SOL)
 - [ ] Transaction signing
 - [ ] Gas estimation
 - [ ] TX broadcasting
 
 ### Phase 3: Enhanced Features
+
 - [ ] ERC-20 token support
 - [ ] SPL token support
 - [ ] Transaction history
 - [ ] Real-time WebSocket updates
 
 ### Phase 4: Multi-Chain Expansion
+
 - [ ] Layer 2 support (Polygon, Arbitrum, Optimism)
 - [ ] Testnet support
 - [ ] Cross-chain transactions
@@ -288,6 +303,7 @@ npm run build
 ## Security Considerations
 
 ### For Developers
+
 - Never log private keys or mnemonics
 - Always use secure random number generation
 - Clear sensitive data from memory after use
@@ -295,6 +311,7 @@ npm run build
 - Keep dependencies updated
 
 ### For Users
+
 - **Backup your mnemonic phrase** - It's the only way to recover your wallet
 - Use a strong password (12+ characters, mixed case, numbers, symbols)
 - Never share your mnemonic or private keys
