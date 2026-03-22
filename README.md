@@ -24,7 +24,7 @@ A secure, non-custodial multi-chain cryptocurrency wallet built with Rust (Axum)
 │  │ - TX Signing    │  │ - Transactions  │  │ - Settings      │  │
 │  └─────────────────┘  └─────────────────┘  └─────────────────┘  │
 │                               │                                 │
-│              Encrypted Wallets (localStorage)                   │
+│              Encrypted Wallets (IndexedDB)                      │
 └───────────────────────────────┼─────────────────────────────────┘
                                 │ HTTP API (Metadata Only)
 ┌───────────────────────────────┼─────────────────────────────────┐
@@ -162,6 +162,9 @@ POST   /wallet/import              # Import wallet metadata
 PUT    /wallet/{id}                # Update wallet name
 DELETE /wallet/{id}                # Delete wallet
 POST   /wallet/{id}/addresses      # Register derived addresses
+GET    /wallet/{id}/balance        # Get wallet balances
+GET    /wallet/{id}/transactions   # Get transaction history
+POST   /wallet/{id}/broadcast      # Broadcast signed transaction
 ```
 
 ### Request/Response Examples
@@ -222,7 +225,12 @@ crypto-wallet/
 │   ├── src/
 │   │   ├── app/               # Next.js pages
 │   │   ├── components/        # React components
-│   │   └── lib/               # Utilities & state
+│   │   └── lib/
+│   │       ├── api/          # HTTP client, wallet API functions
+│   │       ├── crypto/       # Mnemonic, HD wallet, encryption, secure memory
+│   │       ├── storage/      # IndexedDB, session manager, wallet service
+│   │       ├── stores/       # Zustand state management
+│   │       └── types/        # TypeScript type definitions
 │   ├── package.json
 │   └── public/
 ├── documentations/             # Project documentation
@@ -238,12 +246,13 @@ crypto-wallet/
 
 ```bash
 # Backend tests
-cd backend
-cargo test
+cd backend && cargo test
 
-# Frontend tests
-cd frontend
-npm test
+# Frontend tests (Vitest, ~190 tests)
+cd frontend && npm run test:run
+
+# Frontend — specific file
+cd frontend && npx vitest run src/lib/crypto/__tests__/mnemonic.test.ts
 ```
 
 ### Security Auditing
@@ -269,36 +278,6 @@ cargo build --release
 cd frontend
 npm run build
 ```
-
-## Roadmap
-
-### Phase 1: Foundation (Current)
-
-- [x] HD wallet generation (BIP39/BIP32/BIP44)
-- [x] Multi-chain account derivation
-- [x] Wallet metadata API
-- [x] SQLite persistence
-- [x] Address registration
-
-### Phase 2: Basic Operations
-
-- [ ] Balance checking (ETH, SOL)
-- [ ] Transaction signing
-- [ ] Gas estimation
-- [ ] TX broadcasting
-
-### Phase 3: Enhanced Features
-
-- [ ] ERC-20 token support
-- [ ] SPL token support
-- [ ] Transaction history
-- [ ] Real-time WebSocket updates
-
-### Phase 4: Multi-Chain Expansion
-
-- [ ] Layer 2 support (Polygon, Arbitrum, Optimism)
-- [ ] Testnet support
-- [ ] Cross-chain transactions
 
 ## Security Considerations
 
