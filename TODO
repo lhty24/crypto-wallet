@@ -1,0 +1,150 @@
+Development Roadmap:
+
+Phase 1 — Foundation:
+
+  Backend Tasks:
+    ✔ Initialize Rust project with Cargo
+    ✔ ~~Core crypto dependencies~~ → Removed in T6 (non-custodial)
+    ✔ ~~BIP39 mnemonic generation~~ → Moved to frontend
+    ✔ ~~BIP32/BIP44 key derivation~~ → Moved to frontend
+    ✔ ~~Encryption/decryption~~ → Moved to frontend
+    ✔ T1: Set up Axum web server
+    ✔ T2: Simplified wallet metadata-only API endpoints
+    ✔ T3: SQLite database for wallet metadata
+    ✔ T4: Wallet management endpoints (GET /wallets, POST /wallet/{id}/addresses, CRUD)
+    ✔ T5: Blockchain service endpoints (GET balance, GET transactions — mock data)
+    ✔ T6: Remove all mnemonic generation and encryption from backend
+
+  Frontend Tasks:
+    ✔ T1: Client-side cryptographic functionality (BIP39, AES-256-GCM + Argon2, BIP32/BIP44, secure memory)
+    ✔ T2: Secure client-side storage management (IndexedDB, wallet ops, auto-timeout)
+    ✔ T3: API client for metadata-only backend communication
+    ☐ T4: Wallet creation/import UI (mnemonic display, password entry, backup confirmation)
+    ☐ T5: Wallet dashboard (wallet listing, unlock/lock, account derivation)
+    ☐ T6: Basic balance display (mock data)
+
+  Integration:
+    ☐ T1: End-to-end wallet creation and import flow
+    ☐ T2: Secure communication between frontend and backend
+    ☐ T3: Basic error handling and user feedback
+
+Phase 1.5 — Backend Migration (Rust → Go):
+  ☐ T1: Initialize Go project (cmd/, internal/api/, internal/database/, HTTP router, logging, CORS)
+  ☐ T2: Database layer — SQLite (connection, migration, wallet CRUD, address CRUD, CASCADE deletes)
+  ☐ T3: Wallet API endpoints (health, create, import, list, update, delete, addresses, validation)
+  ☐ T4: Blockchain service endpoints — mock (balance, transactions)
+  ☐ T5: Testing and verification (port tests, verify API contract, frontend compatibility, CORS)
+  ☐ T6: Cleanup (remove Rust backend, update README/CLAUDE.md/env docs)
+
+Phase 2 — EVM Transactions & RPC Integration:
+
+  Backend Tasks:
+    ☐ T1: Transaction history indexing (on-demand fetch, cache)
+    ☐ T2: Token list aggregation
+    ☐ T3: Price feed integration (CoinGecko, etc.)
+
+  Frontend Tasks:
+    ☐ T1: Viem RPC setup (providers, balance, gas estimation, nonce, broadcasting)
+    ☐ T2: Client-side transaction signing (ETH transfers, secure key handling)
+    ☐ T3: Send transaction form with real-time gas estimation
+    ☐ T4: Network switching (mainnet/testnets)
+    ☐ T5: Register derived Ethereum addresses with backend
+
+  Testing:
+    ☐ T1: Integration tests with Ethereum testnets
+    ☐ T2: Transaction signing verification
+    ☐ T3: Balance accuracy testing
+
+Phase 3 — Token Support & UX:
+
+  Token Support — Backend:
+    ☐ T1: Aggregate token lists (Uniswap, CoinGecko)
+    ☐ T2: Cache token metadata (symbol, decimals, name, logo)
+    ☐ T3: Token transaction history indexing
+    ☐ T4: Custom token registry
+
+  Token Support — Frontend:
+    ☐ T1: ERC-20 balance fetching via Viem
+    ☐ T2: ERC-20 transaction signing
+    ☐ T3: Token list component with IndexedDB caching
+    ☐ T4: Token balance display with real-time updates
+    ☐ T5: Token transfer UI with gas estimation
+    ☐ T6: Custom token addition flow
+    ☐ T7: Token search and filtering
+    ☐ T8: Secure token contract interactions
+
+  Transaction History & UX — Backend:
+    ☐ T1: Transaction history storage
+    ☐ T2: Transaction status tracking
+    ☐ T3: WebSocket notifications
+    ☐ T4: Transaction retry logic
+
+  Transaction History & UX — Frontend:
+    ☐ T1: Transaction history with filtering
+    ☐ T2: Real-time balance and transaction updates
+    ☐ T3: Loading states and error handling
+    ☐ T4: Transaction details and explorer links
+
+Phase 4 — Solana Integration:
+
+  Backend Tasks:
+    ☐ T1: Solana transaction history indexing (on-demand)
+    ☐ T2: Aggregate SPL token lists (Jupiter, etc.)
+    ☐ T3: Cache Solana token metadata
+
+  Frontend Tasks:
+    ☐ T1: @solana/web3.js RPC setup (endpoints, SOL balance, SPL balance, broadcasting)
+    ☐ T2: Client-side Solana transaction signing (SOL, SPL, Ed25519 key handling)
+    ☐ T3: Solana network support in UI
+    ☐ T4: Chain switching interface
+    ☐ T5: SPL token support with real-time balances
+    ☐ T6: Unified transaction interface for multiple chains
+    ☐ T7: Register derived Solana addresses with backend
+
+  Architecture:
+    ☐ T1: Multi-chain private key management refactor
+    ☐ T2: Common chain interfaces (Ethereum/Solana)
+    ☐ T3: Chain-specific configurations and derivation paths
+    ☐ T4: Unified IndexedDB storage for multi-chain encrypted wallets
+
+Phase 5 — Bitcoin Integration:
+
+  Frontend Tasks:
+    ☐ T1: Bitcoin RPC/API provider (Blockstream, Mempool.space)
+    ☐ T2: UTXO fetching and balance calculation
+    ☐ T3: Bitcoin transaction building (UTXO selection, change output)
+    ☐ T4: Bitcoin transaction signing (secp256k1)
+    ☐ T5: Bitcoin fee estimation
+    ☐ T6: Bitcoin transaction broadcasting
+    ☐ T7: Register derived Bitcoin addresses with backend
+
+  Backend Tasks:
+    ☐ T1: Bitcoin transaction history indexing (on-demand)
+    ☐ T2: Cache Bitcoin transaction metadata
+
+  Testing:
+    ☐ T1: Integration tests with Bitcoin testnet
+    ☐ T2: UTXO selection and change calculation verification
+    ☐ T3: Transaction signing verification
+
+Phase 6 — Production Features:
+
+  Frontend Security:
+    ☐ T1: Security audit of client-side key management
+    ☐ T2: Advanced encryption options (HSM prep)
+    ☐ T3: Backup and recovery flows (mnemonic verification, wallet export/import, recovery testing)
+    ☐ T4: Robust session management (auto-lock config, memory clearing, secure state)
+    ☐ T5: Security warnings and confirmations (large TX, suspicious activity, phishing protection)
+
+  Backend Security:
+    ☐ T1: API security hardening
+    ☐ T2: Rate limiting
+    ☐ T3: Address validation and monitoring
+    ☐ T4: Blockchain data integrity verification
+
+  UX Polish & Documentation:
+    ☐ T1: UI/UX improvements and responsive design
+    ☐ T2: Comprehensive error handling and user feedback
+    ☐ T3: Performance optimization for client-side crypto
+    ☐ T4: Documentation (architecture, security guide, crypto library docs)
+    ☐ T5: Security best practices guide

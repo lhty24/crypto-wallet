@@ -3,17 +3,14 @@
 ## Table of Contents
 
 1. [Project Scope](#project-scope)
-2. [Core Features to Build](#core-features-to-build)
-3. [Development Approach](#development-approach)
-4. [Development Style](#development-style)
-5. [Technical Stack](#technical-stack)
-6. [Detailed Architecture](#detailed-architecture)
-7. [Component Breakdown](#component-breakdown)
-8. [Development Roadmap](#development-roadmap)
-9. [Security Considerations](#security-considerations)
-10. [Testing Strategy](#testing-strategy)
-11. [Key Technical Decisions](#key-technical-decisions)
-12. [Future Enhancements](#future-enhancements)
+2. [Technical Stack](#technical-stack)
+3. [Detailed Architecture](#detailed-architecture)
+4. [Component Breakdown](#component-breakdown)
+5. [Development Roadmap](#development-roadmap)
+6. [Security Considerations](#security-considerations)
+7. [Testing Strategy](#testing-strategy)
+8. [Key Technical Decisions](#key-technical-decisions)
+9. [Future Enhancements](#future-enhancements)
 
 ---
 
@@ -49,100 +46,6 @@ Build a functional multi-chain cryptocurrency wallet from scratch. The wallet wi
 
 ---
 
-## Core Features to Build
-
-### Phase 1: Foundation
-
-1. **Wallet Creation & Management**
-
-   - Mnemonic generation (BIP39)
-   - Wallet import from mnemonic/private key
-   - Secure password-based encryption
-
-2. **Key Management**
-   - HD wallet implementation (BIP32, BIP44)
-   - Multi-account support
-   - Private key derivation
-
-### Phase 2: Basic Operations
-
-3. **Balance Operations**
-
-   - Native token balance checking (ETH, SOL)
-   - Multi-account balance display
-   - Real-time balance updates
-
-4. **Transaction Management**
-   - Send/receive transactions
-   - Transaction signing
-   - Gas estimation and management
-
-### Phase 3: Enhanced Features
-
-5. **Token Support**
-
-   - ERC-20 token support (Ethereum ecosystem)
-   - SPL token support (Solana ecosystem)
-   - Custom token addition
-
-6. **Transaction History**
-   - Local transaction logging
-   - Transaction status tracking
-   - Detailed transaction views
-
-### Phase 4: Multi-Chain Support
-
-7. **Extended Chain Support**
-   - Ethereum mainnet and testnets
-   - Layer 2 solutions (Polygon, Arbitrum, Optimism)
-   - Solana mainnet and devnet
-
----
-
-## Development Approach
-
-### Development Methodology
-
-1. **Incremental Development**: Build and test each component before moving to the next
-2. **Security Focus**: Implement security best practices from the beginning
-3. **Testing Integration**: Test each component thoroughly before progression
-4. **Code Quality**: Maintain high standards throughout development
-
-### Development Phases
-
-- **Phase 1**: Foundation (Weeks 1-2) - Core cryptography and basic wallet
-- **Phase 2**: EVM Support (Weeks 2-3) - Ethereum integration and basic UI
-- **Phase 3**: Enhanced Features (Weeks 3-4) - Tokens and transaction history
-- **Phase 4**: Multi-Chain (Weeks 4-5) - Solana integration and chain abstraction
-- **Phase 5**: Production Polish (Weeks 5-6) - Security hardening and UX improvements
-
----
-
-## Development Style
-
-### Code Quality Standards
-
-- **Production-quality code** with proper error handling
-- **Comprehensive inline comments** for complex implementations
-- **Type safety** throughout the application (TypeScript + Rust)
-- **Security-first mindset** with defensive programming practices
-
-### Documentation Requirements
-
-- Inline code comments for complex crypto operations
-- API documentation for all endpoints
-- Security considerations documented for each component
-- Architecture decisions recorded with rationale
-
-### Testing Philosophy
-
-- Unit tests for all cryptographic functions
-- Integration tests with testnets
-- End-to-end testing for user flows
-- Security testing for key management
-
----
-
 ## Technical Stack
 
 ### Frontend: React/Next.js + TypeScript ✅
@@ -161,7 +64,7 @@ Build a functional multi-chain cryptocurrency wallet from scratch. The wallet wi
 - **Zustand**: Lightweight state management
 - **@noble/crypto**: Audited cryptographic primitives
 
-### Backend: Rust + Axum ✅
+### Backend: Rust + Axum ✅ → Migrating to Go in Phase 1.5
 
 **Role**: Metadata Cache and API Aggregator
 
@@ -172,14 +75,15 @@ The backend does NOT proxy real-time blockchain queries. Instead, it focuses on:
 - **API Aggregation**: Token lists, price feeds from multiple sources
 - **Caching**: Reduce frontend API calls for non-real-time data
 
-**Rationale**:
+**Rationale for Go migration**:
 
-- Memory safety for data processing
-- Performance for caching and aggregation
-- Secure by default with compiler guarantees
-- Simplified scope: no blockchain RPC proxying
+- Backend is a simple metadata store and API proxy — Rust's complexity is unnecessary
+- Go offers faster iteration for REST API + database CRUD workloads
+- Simpler error handling for straightforward business logic
+- Single binary deployment (same as Rust)
+- All cryptographic operations are frontend-only, so Rust's memory safety guarantees aren't needed here
 
-**Key Crates** (Metadata-only backend):
+**Current Crates** (Rust — until Phase 1.5 migration):
 
 - **axum**: Modern web framework
 - **sqlx**: Async SQLite database
@@ -272,7 +176,7 @@ The backend does NOT proxy real-time blockchain queries. Instead, it focuses on:
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │ ⚠️  NO SENSITIVE DATA   │ Metadata Storage      │ Blockchain Cache             │
 │ ┌─────────────────────┐│ ┌───────────────────┐  │ ┌──────────────────────────┐ │
-│ │ ❌ NO Private Keys   ││ │ SQLite Database   │  │ │ Redis Cache              │ │
+│ │ ❌ NO Private Keys   ││ │ SQLite Database   │  │ │ SQLite Cache             │ │
 │ │ ❌ NO Mnemonics     ││ │ - Wallet Metadata │  │ │ - Token Prices           │ │
 │ │ ❌ NO Passwords     ││ │ - Public Addresses│  │ │ - Transaction History    │ │
 │ │                     ││ │ - Account Labels  │  │ │ - Balance Cache          │ │
@@ -321,92 +225,19 @@ To avoid state drift and the "Double RPC Problem" (both frontend and backend que
 
 ### Frontend Components (Next.js)
 
-#### Core Wallet Components
+#### Planned Component Directories
 
-```typescript
-src/
-├── components/
-│   ├── wallet/
-│   │   ├── WalletDashboard.tsx     // Main wallet overview
-│   │   ├── AccountList.tsx         // HD wallet account management
-│   │   ├── CreateWallet.tsx        // Client-side mnemonic generation UI
-│   │   ├── ImportWallet.tsx        // Import and encrypt mnemonic
-│   │   ├── UnlockWallet.tsx        // Password entry and decryption
-│   │   └── WalletSelector.tsx      // Select from local encrypted wallets
-│   ├── transactions/
-│   │   ├── SendForm.tsx           // Transaction creation and signing
-│   │   ├── TransactionHistory.tsx  // TX history with filtering
-│   │   ├── TransactionDetails.tsx  // Detailed TX view
-│   │   ├── TransactionSigner.tsx   // Client-side transaction signing
-│   │   └── GasEstimator.tsx       // Gas price estimation
-│   ├── tokens/
-│   │   ├── TokenList.tsx          // ERC-20/SPL token balances
-│   │   ├── TokenDetails.tsx       // Individual token view
-│   │   └── AddToken.tsx           // Custom token addition
-│   ├── security/
-│   │   ├── SecuritySettings.tsx   // Backup, password change
-│   │   ├── BackupMnemonic.tsx     // Mnemonic backup flow
-│   │   ├── PasswordManager.tsx    // Password management
-│   │   └── AutoLockSettings.tsx   // Session timeout configuration
-│   └── crypto/
-│       ├── MnemonicGenerator.tsx  // BIP39 mnemonic generation
-│       ├── EncryptionManager.tsx  // AES-256 encryption/decryption
-│       ├── KeyDerivation.tsx      // BIP32/BIP44 key derivation
-│       └── LocalStorage.tsx       // Secure local storage management
+```
+src/components/
+├── wallet/          # Wallet creation, import, unlock, dashboard
+├── transactions/    # Send form, TX history, signing, gas estimation
+├── tokens/          # Token list, details, custom token addition
+└── security/        # Backup, password management, auto-lock settings
 ```
 
-#### State Management (Zustand)
+### Backend Components (Rust → migrating to Go in Phase 1.5)
 
-```typescript
-interface WalletState {
-  // Core State
-  isUnlocked: boolean;
-  currentWallet: EncryptedWallet | null;
-  currentAccount: Account | null;
-  accounts: Account[];
-  localWallets: EncryptedWallet[]; // From localStorage
-
-  // Multi-Chain State
-  activeChain: SupportedChain;
-  supportedChains: ChainConfig[];
-
-  // Balance & Token State (fetched from backend)
-  balances: Record<string, Balance>;
-  tokens: Record<string, Token[]>;
-
-  // Transaction State
-  pendingTransactions: Transaction[];
-  transactionHistory: Transaction[];
-
-  // Security State
-  autoLockTimer: number;
-  lastActivity: Date;
-
-  // Crypto Actions (Client-Side)
-  generateMnemonic: () => string;
-  encryptMnemonic: (mnemonic: string, password: string) => EncryptedWallet;
-  decryptMnemonic: (wallet: EncryptedWallet, password: string) => string;
-  deriveKeys: (mnemonic: string, chain: SupportedChain) => PrivateKey[];
-  signTransaction: (
-    tx: UnsignedTransaction,
-    privateKey: PrivateKey
-  ) => SignedTransaction;
-
-  // Storage Actions
-  saveWalletLocally: (wallet: EncryptedWallet) => void;
-  loadLocalWallets: () => EncryptedWallet[];
-
-  // Backend Actions (Metadata Only)
-  registerWallet: (name: string) => Promise<string>; // Returns wallet_id
-  registerAddresses: (walletId: string, addresses: string[]) => Promise<void>;
-  fetchBalances: (walletId: string) => Promise<Balance[]>;
-  broadcastTransaction: (signedTx: SignedTransaction) => Promise<string>;
-}
-```
-
-### Backend Components (Rust)
-
-#### Project Structure (Current - Post T6 Refactor)
+#### Project Structure (Current Rust — will be replaced by Go in Phase 1.5)
 
 ```rust
 src/
@@ -435,65 +266,68 @@ src/
 > are handled client-side in TypeScript/JavaScript. The backend only stores metadata and provides
 > blockchain query services.
 
-**HD Wallet Core** (Frontend - TypeScript/conceptual):
+**HD Wallet** (Frontend — `lib/crypto/hdwallet.ts`):
 
-```rust
-pub struct HDWallet {
-    mnemonic: Mnemonic,
-    seed: [u8; 64],
-    master_key: ExtendedPrivKey,
+```typescript
+type SupportedChain = 'bitcoin' | 'ethereum' | 'solana';
+
+interface DerivedAddress {
+  address: string;
+  publicKey: Uint8Array;
+  derivationPath: string;
 }
 
-impl HDWallet {
-    pub fn new(entropy_bits: usize) -> Result<Self>;
-    pub fn from_mnemonic(mnemonic: Mnemonic) -> Result<Self>;
-    pub fn derive_account(&self, chain: Chain, index: u32) -> Result<Account>;
-}
+function deriveAddressFromMnemonic(
+  mnemonic: string,
+  chain: SupportedChain
+): Promise<DerivedAddress>;
+// Derives BIP44 address for the given chain from a BIP39 mnemonic
+// Bitcoin: m/44'/0'/0'/0/0 (secp256k1, P2PKH)
+// Ethereum: m/44'/60'/0'/0/0 (secp256k1, Keccak256)
+// Solana: m/44'/501'/0'/0' (Ed25519)
 ```
 
-**Transaction Engine**:
+**Encryption** (Frontend — `lib/crypto/encryption.ts`):
 
-```rust
-pub struct TransactionBuilder {
-    chain: Chain,
-    from: Address,
-    to: Address,
-    amount: u64,
-    gas_price: Option<u64>,
-    nonce: Option<u64>,
+```typescript
+interface EncryptedData {
+  ciphertext: Uint8Array;
+  salt: Uint8Array;      // 32 bytes
+  nonce: Uint8Array;     // 12 bytes
 }
 
-impl TransactionBuilder {
-    pub async fn build_evm_transaction(&self) -> Result<EvmTransaction>;
-    pub async fn build_solana_transaction(&self) -> Result<SolanaTransaction>;
-    pub async fn estimate_gas(&self) -> Result<u64>;
-    pub async fn sign_transaction(&self, private_key: &PrivateKey) -> Result<SignedTransaction>;
-}
+function encryptMnemonic(
+  mnemonic: string,
+  password: string
+): Promise<EncryptedData>;
+// AES-256-GCM encryption with Argon2id key derivation (64MB, 3 iterations)
+
+function decryptMnemonic(
+  encrypted: EncryptedData,
+  password: string
+): Promise<string>;
 ```
 
-**Security Layer**:
+**Secure Memory** (Frontend — `lib/crypto/secureMemory.ts`):
 
-```rust
-pub struct EncryptedKeystore {
-    encrypted_data: Vec<u8>,
-    salt: [u8; 32],
-    nonce: [u8; 12],
-    version: u8,
-}
+```typescript
+function zeroBuffer(buffer: Uint8Array): void;
+// Fills buffer with zeros to clear sensitive data from memory
 
-impl EncryptedKeystore {
-    pub fn encrypt_mnemonic(mnemonic: &str, password: &str) -> Result<Self>;
-    pub fn decrypt_mnemonic(&self, password: &str) -> Result<String>;
-}
+function withSecureCleanup<T>(
+  buffer: Uint8Array,
+  fn: (buffer: Uint8Array) => T | Promise<T>
+): Promise<T>;
+// Executes fn with buffer, guarantees zeroing even on error
 ```
 
 ---
 
 ## Development Roadmap
 
-### Phase 1: Foundation (Weeks 1-2)
+### Phase 1: Foundation
 
-#### Week 1: Project Setup & Core Cryptography
+#### Project Setup & Core Cryptography
 
 **Goals**: Establish development environment and implement core wallet functionality
 
@@ -510,13 +344,13 @@ impl EncryptedKeystore {
 
 **Frontend Tasks**:
 
-- [ ] **Initialization & Setup**:
-  - [ ] Initialize Next.js project with TypeScript and App Router
-  - [ ] Set up Tailwind CSS styling framework
-  - [ ] Install Viem (Ethereum) and Solana web3.js dependencies
-  - [ ] Configure Zustand state management store
-  - [ ] Create project structure with component directories
-  - [ ] Set up TypeScript types and security headers
+- [x] **Initialization & Setup** ✅:
+  - [x] Initialize Next.js project with TypeScript and App Router
+  - [x] Set up Tailwind CSS styling framework
+  - [x] Install Viem (Ethereum) and Solana web3.js dependencies
+  - [x] Configure Zustand state management store
+  - [x] Create project structure with component directories
+  - [x] Set up TypeScript types and security headers
 
 **Deliverables**:
 
@@ -524,7 +358,7 @@ impl EncryptedKeystore {
 - Basic UI for wallet creation/import
 - Comprehensive test suite for crypto functions
 
-#### Week 2: Basic Wallet Operations
+#### Basic Wallet Operations
 
 **Goals**: Connect frontend to backend and implement basic wallet operations
 
@@ -543,7 +377,6 @@ impl EncryptedKeystore {
 - [x] T5: Create foundation for blockchain service endpoints ✅
   - [x] GET /wallet/{id}/balance - Balance checking (mock data, ready for blockchain API)
   - [x] GET /wallet/{id}/transactions - Transaction history (mock data)
-  - [x] POST /wallet/{id}/broadcast - Broadcast signed transactions (mock, ready for integration)
 - [x] T6: Remove all mnemonic generation and encryption from backend ✅
   - [x] Deleted `src/core/` directory (~2000 lines of crypto code)
   - [x] Removed 9 crypto dependencies from Cargo.toml
@@ -551,46 +384,91 @@ impl EncryptedKeystore {
 
 **Frontend Tasks**:
 
-- [x] Implement client-side cryptographic functionality
+- [x] T1: Implement client-side cryptographic functionality ✅
   - [x] Client-side mnemonic generation (BIP39)
   - [x] Password-based encryption system (AES-256-GCM + Argon2)
   - [x] HD wallet derivation (BIP32/BIP44) for address generation
   - [x] Secure memory management and cleanup
-- [x] Build secure client-side storage management
+- [x] T2: Build secure client-side storage management ✅
   - [x] Encrypted mnemonic storage in IndexedDB
   - [x] Wallet operations (create, import, unlock, lock, delete)
   - [x] Auto-timeout and security features
-- [ ] Implement API client for metadata-only backend communication
-- [ ] Create wallet creation/import UI with client-side crypto
+- [x] T3: Implement API client for metadata-only backend communication ✅
+- [ ] T4: Create wallet creation/import UI with client-side crypto
   - [ ] Mnemonic generation and display
   - [ ] Password entry and validation
   - [ ] Mnemonic backup confirmation flow
-- [ ] Create wallet dashboard with locally-stored encrypted wallets
+- [ ] T5: Create wallet dashboard with locally-stored encrypted wallets
   - [ ] Wallet listing from local storage
   - [ ] Unlock/lock interface
   - [ ] Account derivation and display
-- [ ] Add basic balance display (mock data initially)
+- [ ] T6: Add basic balance display (mock data initially)
 
 **Integration**:
 
-- [ ] End-to-end wallet creation and import flow
-- [ ] Secure communication between frontend and backend
-- [ ] Basic error handling and user feedback
-- [ ] Remove `/broadcast` endpoint from backend (frontend broadcasts directly via RPC per Write-Direct pattern)
+- [ ] T1: End-to-end wallet creation and import flow
+- [ ] T2: Secure communication between frontend and backend
+- [ ] T3: Basic error handling and user feedback
 
-### Phase 2: EVM Support (Weeks 2-3)
+### Phase 1.5: Backend Migration — Rust to Go
 
-#### Week 2-3: Ethereum Integration
+**Goals**: Rewrite the backend in Go while preserving the existing API contract. The backend is a metadata store and API proxy — Go's simplicity and fast iteration speed are a better fit than Rust for this workload.
+
+**Approach**: Rewrite against the existing API spec. Frontend stays unchanged — all endpoints, request/response shapes, and behavior must match 1:1.
+
+**Tasks**:
+
+- [ ] T1: Initialize Go project and core structure
+  - [ ] Set up Go module with project layout (cmd/, internal/api/, internal/database/)
+  - [ ] Choose and configure HTTP router (Chi or stdlib)
+  - [ ] Set up structured logging (slog or zerolog)
+  - [ ] Configure CORS middleware (matching current Axum CORS config)
+  - [ ] Add request size limiting middleware
+
+- [ ] T2: Database layer (SQLite)
+  - [ ] Set up SQLite connection with go-sqlite3 or modernc.org/sqlite
+  - [ ] Implement auto-migration (same schema: wallets, wallet_addresses tables)
+  - [ ] Implement wallet CRUD operations (create, list, get, update, delete)
+  - [ ] Implement wallet_address CRUD operations (register, list, delete)
+  - [ ] Ensure foreign key CASCADE delete behavior matches
+
+- [ ] T3: Wallet API endpoints
+  - [ ] GET /health
+  - [ ] POST /wallet/create
+  - [ ] POST /wallet/import
+  - [ ] GET /wallets
+  - [ ] PUT /wallet/{id}
+  - [ ] DELETE /wallet/{id}
+  - [ ] POST /wallet/{id}/addresses
+  - [ ] Input validation matching existing rules (name length, chain validation, etc.)
+
+- [ ] T4: Blockchain service endpoints (mock, same as Rust)
+  - [ ] GET /wallet/{id}/balance (mock data)
+  - [ ] GET /wallet/{id}/transactions (empty array)
+
+- [ ] T5: Testing and verification
+  - [ ] Port existing backend tests to Go
+  - [ ] Verify all endpoints match existing API contract (same URLs, methods, request/response JSON; /broadcast intentionally removed per Write-Direct pattern)
+  - [ ] Run frontend test suite against Go backend to confirm compatibility
+  - [ ] Verify CORS, error responses, and status codes match
+
+- [ ] T6: Cleanup
+  - [ ] Remove backend/ Rust directory
+  - [ ] Update README.md backend sections (tech stack, commands, project structure)
+  - [ ] Update CLAUDE.md backend sections
+  - [ ] Update environment variable documentation if any changes
+
+### Phase 2: EVM Transactions & RPC Integration
 
 **Goals**: Add full Ethereum support with balance checking and transactions
 
 **Backend Tasks** (Metadata & History Only - per Write-Direct pattern):
 
-- [ ] Implement transaction history indexing for registered addresses
+- [ ] T1: Implement transaction history indexing for registered addresses
   - [ ] On-demand fetch from block explorers/indexers (Etherscan, etc.)
   - [ ] Cache and store transaction history
-- [ ] Add token list aggregation from external sources
-- [ ] Implement price feed integration (CoinGecko, etc.)
+- [ ] T2: Add token list aggregation from external sources
+- [ ] T3: Implement price feed integration (CoinGecko, etc.)
 
 > **Note:** Per "Write-Direct, Read-Indexed" pattern, frontend handles real-time RPC calls
 > (balance, gas estimation, nonce, broadcast) directly via Viem. Backend focuses on
@@ -598,162 +476,178 @@ impl EncryptedKeystore {
 
 **Frontend Tasks** (Direct RPC via Viem):
 
-- [ ] Implement Ethereum private key derivation from mnemonic
-  - [ ] BIP44 Ethereum derivation path (m/44'/60'/0'/0/x)
-  - [ ] Private key generation for Ethereum accounts
-  - [ ] Address generation from private keys
-- [ ] Set up Viem for direct Ethereum RPC interactions
+- [ ] T1: Set up Viem for direct Ethereum RPC interactions
   - [ ] Configure RPC providers (Infura, Alchemy, public RPCs)
   - [ ] Implement balance fetching (frontend → RPC)
   - [ ] Implement gas estimation (frontend → RPC)
   - [ ] Implement nonce management (frontend → RPC)
   - [ ] Implement transaction broadcasting (frontend → RPC)
-- [ ] Implement client-side transaction signing
+- [ ] T2: Implement client-side transaction signing
   - [ ] Sign ETH transfer transactions with private keys
   - [ ] Secure private key handling during signing
-- [ ] Create send transaction form with real-time gas estimation
-- [ ] Add transaction history view (frontend → backend for cached history)
-- [ ] Implement network switching (mainnet/testnets)
-- [ ] Register derived Ethereum addresses with backend
+- [ ] T3: Create send transaction form with real-time gas estimation
+- [ ] T4: Implement network switching (mainnet/testnets)
+- [ ] T5: Register derived Ethereum addresses with backend
 
 **Testing**:
 
-- [ ] Integration tests with Ethereum testnets
-- [ ] Transaction signing verification
-- [ ] Balance accuracy testing
+- [ ] T1: Integration tests with Ethereum testnets
+- [ ] T2: Transaction signing verification
+- [ ] T3: Balance accuracy testing
 
-### Phase 3: Enhanced Features (Weeks 3-4)
+### Phase 3: Token Support & UX
 
-#### Week 3: Token Support
+#### Token Support
 
 **Goals**: Add ERC-20 token support and enhanced transaction features
 
 **Backend Tasks** (Token Metadata & Aggregation Only):
 
-- [ ] Aggregate token lists from external sources (Uniswap, CoinGecko)
-- [ ] Cache token metadata (symbol, decimals, name, logo)
-- [ ] Implement token transaction history indexing
-- [ ] Add custom token registry for user-added tokens
+- [ ] T1: Aggregate token lists from external sources (Uniswap, CoinGecko)
+- [ ] T2: Cache token metadata (symbol, decimals, name, logo)
+- [ ] T3: Implement token transaction history indexing
+- [ ] T4: Add custom token registry for user-added tokens
 
 > **Note:** Frontend handles token balance queries directly via Viem (ERC-20 balanceOf calls).
 > Backend provides token discovery and metadata aggregation.
 
 **Frontend Tasks** (Direct RPC for Balances):
 
-- [ ] Implement ERC-20 balance fetching via Viem (frontend → RPC)
-- [ ] Implement ERC-20 transaction signing with private keys
-- [ ] Create token list component with IndexedDB caching
-- [ ] Add token balance display with real-time updates
-- [ ] Implement token transfer UI with gas estimation (frontend → RPC)
-- [ ] Create custom token addition flow
-- [ ] Add token search and filtering
-- [ ] Secure handling of token contract interactions
+- [ ] T1: Implement ERC-20 balance fetching via Viem (frontend → RPC)
+- [ ] T2: Implement ERC-20 transaction signing with private keys
+- [ ] T3: Create token list component with IndexedDB caching
+- [ ] T4: Add token balance display with real-time updates
+- [ ] T5: Implement token transfer UI with gas estimation (frontend → RPC)
+- [ ] T6: Create custom token addition flow
+- [ ] T7: Add token search and filtering
+- [ ] T8: Secure handling of token contract interactions
 
-#### Week 4: Transaction History & UX
+#### Transaction History & UX
 
 **Goals**: Improve transaction management and user experience
 
 **Backend Tasks**:
 
-- [ ] Implement transaction history storage
-- [ ] Add transaction status tracking
-- [ ] Create WebSocket notifications for real-time updates
-- [ ] Implement transaction retry logic
+- [ ] T1: Implement transaction history storage
+- [ ] T2: Add transaction status tracking
+- [ ] T3: Create WebSocket notifications for real-time updates
+- [ ] T4: Implement transaction retry logic
 
 **Frontend Tasks**:
 
-- [ ] Enhanced transaction history with filtering
-- [ ] Real-time balance and transaction updates
-- [ ] Improved loading states and error handling
-- [ ] Transaction details and explorer links
+- [ ] T1: Enhanced transaction history with filtering
+- [ ] T2: Real-time balance and transaction updates
+- [ ] T3: Improved loading states and error handling
+- [ ] T4: Transaction details and explorer links
 
-### Phase 4: Multi-Chain Support (Weeks 4-5)
-
-#### Week 4-5: Solana Integration
+### Phase 4: Solana Integration
 
 **Goals**: Add Solana support and create chain abstraction
 
 **Backend Tasks** (History & Token Aggregation Only):
 
-- [ ] Implement Solana transaction history indexing (on-demand)
-- [ ] Aggregate SPL token lists (Jupiter, etc.)
-- [ ] Cache Solana token metadata
+- [ ] T1: Implement Solana transaction history indexing (on-demand)
+- [ ] T2: Aggregate SPL token lists (Jupiter, etc.)
+- [ ] T3: Cache Solana token metadata
 
 > **Note:** Per "Write-Direct, Read-Indexed" pattern, frontend handles real-time Solana RPC calls
 > (balance, transaction broadcast) directly via @solana/web3.js.
 
 **Frontend Tasks** (Direct RPC via @solana/web3.js):
 
-- [ ] Implement Solana private key derivation from mnemonic
-  - [ ] BIP44 Solana derivation path (m/44'/501'/0'/0')
-  - [ ] Ed25519 key pair generation for Solana
-  - [ ] Solana address generation from public keys
-- [ ] Set up @solana/web3.js for direct Solana RPC interactions
+- [ ] T1: Set up @solana/web3.js for direct Solana RPC interactions
   - [ ] Configure RPC endpoints (mainnet, devnet)
   - [ ] Implement SOL balance fetching (frontend → RPC)
   - [ ] Implement SPL token balance fetching (frontend → RPC)
   - [ ] Implement transaction broadcasting (frontend → RPC)
-- [ ] Implement client-side Solana transaction signing
+- [ ] T2: Implement client-side Solana transaction signing
   - [ ] Sign SOL transfer transactions
   - [ ] Sign SPL token transactions
   - [ ] Secure handling of Ed25519 private keys
-- [ ] Add Solana network support in UI
-- [ ] Implement chain switching interface
-- [ ] Add SPL token support with real-time balances
-- [ ] Create unified transaction interface for multiple chains
-- [ ] Register derived Solana addresses with backend
+- [ ] T3: Add Solana network support in UI
+- [ ] T4: Implement chain switching interface
+- [ ] T5: Add SPL token support with real-time balances
+- [ ] T6: Create unified transaction interface for multiple chains
+- [ ] T7: Register derived Solana addresses with backend
 
 **Architecture**:
 
-- [ ] Refactor frontend for multi-chain private key management
-- [ ] Create common interfaces for different chains (Ethereum/Solana)
-- [ ] Implement chain-specific configurations and derivation paths
-- [ ] Unified IndexedDB storage for multi-chain encrypted wallets
+- [ ] T1: Refactor frontend for multi-chain private key management
+- [ ] T2: Create common interfaces for different chains (Ethereum/Solana)
+- [ ] T3: Implement chain-specific configurations and derivation paths
+- [ ] T4: Unified IndexedDB storage for multi-chain encrypted wallets
 
-### Phase 5: Production Features (Weeks 5-6)
+### Phase 5: Bitcoin Integration
 
-#### Week 5: Security Hardening
+**Goals**: Add Bitcoin transaction support leveraging the existing key derivation (secp256k1, BIP44 m/44'/0'/0'/0/0) already implemented in `hdwallet.ts`.
+
+> **Note:** Bitcoin uses a UTXO model (unlike Ethereum/Solana's account model), requiring different transaction building logic. Key derivation and address generation are already complete.
+
+**Frontend Tasks** (Direct RPC via Bitcoin API providers):
+
+- [ ] T1: Set up Bitcoin RPC/API provider (Blockstream, Mempool.space)
+- [ ] T2: Implement UTXO fetching and balance calculation
+- [ ] T3: Implement Bitcoin transaction building (UTXO selection, change output)
+- [ ] T4: Implement Bitcoin transaction signing (secp256k1)
+- [ ] T5: Implement Bitcoin fee estimation
+- [ ] T6: Implement Bitcoin transaction broadcasting (frontend → RPC)
+- [ ] T7: Register derived Bitcoin addresses with backend
+
+**Backend Tasks** (History Only):
+
+- [ ] T1: Implement Bitcoin transaction history indexing (on-demand)
+- [ ] T2: Cache Bitcoin transaction metadata
+
+**Testing**:
+
+- [ ] T1: Integration tests with Bitcoin testnet
+- [ ] T2: UTXO selection and change calculation verification
+- [ ] T3: Transaction signing verification
+
+### Phase 6: Production Features
+
+#### Security Hardening
 
 **Goals**: Implement production-level security features for non-custodial architecture
 
 **Frontend Security Tasks**:
 
-- [ ] Security audit of client-side key management
-- [ ] Implement advanced encryption options (hardware security modules prep)
-- [ ] Add comprehensive backup and recovery flows
+- [ ] T1: Security audit of client-side key management
+- [ ] T2: Implement advanced encryption options (hardware security modules prep)
+- [ ] T3: Add comprehensive backup and recovery flows
   - [ ] Mnemonic phrase backup verification
   - [ ] Encrypted wallet export/import
   - [ ] Recovery phrase testing interface
-- [ ] Implement robust session management
+- [ ] T4: Implement robust session management
   - [ ] Auto-lock timer configuration
   - [ ] Memory clearing verification
   - [ ] Secure session state management
-- [ ] Add security warnings and confirmations
+- [ ] T5: Add security warnings and confirmations
   - [ ] Large transaction confirmations
   - [ ] Suspicious activity warnings
   - [ ] Phishing protection measures
 
 **Backend Security Tasks**:
 
-- [ ] API security hardening
-- [ ] Rate limiting implementation
-- [ ] Address validation and monitoring
-- [ ] Blockchain data integrity verification
+- [ ] T1: API security hardening
+- [ ] T2: Rate limiting implementation
+- [ ] T3: Address validation and monitoring
+- [ ] T4: Blockchain data integrity verification
 
-#### Week 6: UX Polish & Documentation
+#### UX Polish & Documentation
 
 **Goals**: Polish user experience and create comprehensive documentation
 
 **Tasks**:
 
-- [ ] UI/UX improvements and responsive design
-- [ ] Comprehensive error handling and user feedback
-- [ ] Performance optimization for client-side crypto operations
-- [ ] Complete documentation
+- [ ] T1: UI/UX improvements and responsive design
+- [ ] T2: Comprehensive error handling and user feedback
+- [ ] T3: Performance optimization for client-side crypto operations
+- [ ] T4: Complete documentation
   - [ ] Non-custodial architecture documentation
   - [ ] Client-side security implementation guide
   - [ ] Frontend crypto library documentation
-- [ ] Security best practices guide for non-custodial wallets
+- [ ] T5: Security best practices guide for non-custodial wallets
 
 ---
 
@@ -766,7 +660,7 @@ impl EncryptedKeystore {
 - **Frontend-only key management** - Private keys never leave client device
 - **Zero backend trust** - Backend never sees mnemonics, passwords, or private keys
 - **Client-side encryption** - All sensitive data encrypted before storage
-- **Local storage only** - Encrypted mnemonics stored in browser localStorage
+- **IndexedDB storage** - Encrypted mnemonics stored in browser IndexedDB
 - **No server-side custody** - Backend handles only metadata and blockchain services
 
 #### 2. Private Key Protection
@@ -811,45 +705,6 @@ impl EncryptedKeystore {
 - **Session security** - Secure session management and timeout
 - **Error handling** - Don't expose sensitive information in error messages
 
-### Encryption Implementation
-
-```rust
-// Key Derivation using Argon2
-fn derive_encryption_key(password: &str, salt: &[u8; 32]) -> Result<[u8; 32]> {
-    let config = Config {
-        variant: Variant::Argon2id,
-        version: Version::Version13,
-        mem_cost: 65536,      // 64 MB
-        time_cost: 3,         // 3 iterations
-        lanes: 4,             // 4 parallel threads
-        secret: &[],
-        ad: &[],
-        hash_length: 32,
-    };
-
-    let mut key = [0u8; 32];
-    argon2::hash_raw(password.as_bytes(), salt, &config, &mut key)?;
-    Ok(key)
-}
-
-// AES-256-GCM Encryption
-fn encrypt_sensitive_data(data: &[u8], password: &str) -> Result<EncryptedData> {
-    let salt = generate_secure_random_32();
-    let nonce = generate_secure_random_12();
-    let key = derive_encryption_key(password, &salt)?;
-
-    let cipher = Aes256Gcm::new(&key.into());
-    let ciphertext = cipher.encrypt(&nonce.into(), data)?;
-
-    Ok(EncryptedData {
-        ciphertext,
-        salt,
-        nonce,
-        version: 1,
-    })
-}
-```
-
 ### Security Checklist
 
 **Before Production**:
@@ -875,7 +730,7 @@ fn encrypt_sensitive_data(data: &[u8], password: &str) -> Result<EncryptedData> 
 
 ### Unit Testing
 
-#### Frontend Testing (Jest + React Testing Library)
+#### Frontend Testing (Vitest, ~190 tests)
 
 ```typescript
 // Example: Wallet component tests
@@ -897,55 +752,11 @@ describe("WalletDashboard", () => {
 describe("Address validation", () => {
   test("validates Ethereum addresses correctly", () => {
     expect(
-      isValidEthereumAddress("0x742d35Cc12C4F24aF6a8fa1d8F78CC2E8f3C72Ac")
+      isValidEthereumAddress("0x742d35Cc12C4F24aF6a8fa1d8F78CC2E8f3C72Ac"),
     ).toBe(true);
     expect(isValidEthereumAddress("invalid")).toBe(false);
   });
 });
-```
-
-#### Backend Testing (Rust)
-
-```rust
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_mnemonic_generation() {
-        let mnemonic = generate_mnemonic(256).unwrap();
-        assert_eq!(mnemonic.word_count(), 24);
-        assert!(mnemonic.validate().is_ok());
-    }
-
-    #[test]
-    fn test_hd_wallet_derivation() {
-        let wallet = HDWallet::from_test_mnemonic();
-        let eth_account = wallet.derive_account(Chain::Ethereum, 0).unwrap();
-        let sol_account = wallet.derive_account(Chain::Solana, 0).unwrap();
-
-        assert!(eth_account.address().starts_with("0x"));
-        assert_ne!(eth_account.address(), sol_account.address());
-    }
-
-    #[test]
-    fn test_transaction_signing() {
-        // Test Ethereum transaction signing
-        // Test Solana transaction signing
-        // Verify signature validation
-    }
-
-    #[test]
-    fn test_encryption_decryption() {
-        let original_data = "test mnemonic phrase";
-        let password = "secure_password123";
-
-        let encrypted = encrypt_mnemonic(original_data, password).unwrap();
-        let decrypted = decrypt_mnemonic(&encrypted, password).unwrap();
-
-        assert_eq!(original_data, decrypted);
-    }
-}
 ```
 
 ### Integration Testing
@@ -953,24 +764,25 @@ mod tests {
 #### API Testing
 
 ```typescript
-// Test wallet creation flow
+// Test non-custodial wallet creation flow
 describe("Wallet API Integration", () => {
   test("complete wallet creation flow", async () => {
-    // 1. Create wallet
-    const createResponse = await api.post("/wallet/create", {
-      password: "test_password",
-    });
-    expect(createResponse.data.mnemonic).toBeDefined();
+    // 1. Create wallet metadata on backend (no sensitive data)
+    const createResult = await createWallet("My Wallet");
+    expect(createResult.success).toBe(true);
+    expect(createResult.data.wallet_id).toBeDefined();
 
-    // 2. Unlock wallet
-    const unlockResponse = await api.post("/wallet/unlock", {
-      password: "test_password",
+    // 2. Register derived addresses (public data only)
+    const registerResult = await registerAddress(createResult.data.wallet_id, {
+      address: "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD78",
+      chain: "ethereum",
+      derivation_path: "m/44'/60'/0'/0/0",
     });
-    expect(unlockResponse.data.success).toBe(true);
+    expect(registerResult.success).toBe(true);
 
-    // 3. Derive accounts
-    const accountsResponse = await api.get("/accounts");
-    expect(accountsResponse.data.accounts).toHaveLength(1);
+    // 3. List wallets
+    const listResult = await listWallets();
+    expect(listResult.data).toHaveLength(1);
   });
 });
 ```
@@ -995,61 +807,6 @@ describe("Blockchain Integration", () => {
 });
 ```
 
-### End-to-End Testing
-
-#### User Flow Testing (Playwright)
-
-```typescript
-// Test complete user workflows
-test("complete wallet setup and transaction flow", async ({ page }) => {
-  // 1. Navigate to app
-  await page.goto("http://localhost:3000");
-
-  // 2. Create new wallet
-  await page.click('[data-testid="create-wallet-btn"]');
-  await page.fill('[data-testid="password-input"]', "secure_password123");
-  await page.click('[data-testid="create-btn"]');
-
-  // 3. Backup mnemonic
-  const mnemonic = await page.textContent('[data-testid="mnemonic-display"]');
-  await page.click('[data-testid="backup-confirmed-btn"]');
-
-  // 4. Send transaction
-  await page.click('[data-testid="send-btn"]');
-  await page.fill('[data-testid="recipient-input"]', "test_address");
-  await page.fill('[data-testid="amount-input"]', "0.001");
-  await page.click('[data-testid="send-transaction-btn"]');
-
-  // 5. Verify transaction in history
-  await page.click('[data-testid="history-tab"]');
-  await expect(
-    page.locator('[data-testid="transaction-list"] >> nth=0')
-  ).toBeVisible();
-});
-```
-
-### Security Testing
-
-#### Penetration Testing Checklist
-
-- [ ] SQL injection testing on all endpoints
-- [ ] Cross-site scripting (XSS) testing
-- [ ] Cross-site request forgery (CSRF) testing
-- [ ] Authentication bypass attempts
-- [ ] Session management testing
-- [ ] Input validation testing
-- [ ] Rate limiting verification
-- [ ] File upload security (if applicable)
-- [ ] Error message information disclosure
-- [ ] Cryptographic implementation testing
-
-#### Automated Security Tools
-
-- **Frontend**: ESLint security plugins, npm audit
-- **Backend**: Cargo audit, clippy security lints
-- **Dependencies**: Dependabot, Snyk scanning
-- **Static Analysis**: SonarQube, CodeQL
-
 ---
 
 ## Key Technical Decisions
@@ -1069,7 +826,7 @@ test("complete wallet setup and transaction flow", async ({ page }) => {
 
 - **Frontend Responsibilities**: Mnemonic generation, encryption, private key derivation, transaction signing
 - **Backend Responsibilities**: Metadata storage, blockchain services, address monitoring
-- **Storage Model**: Encrypted mnemonics in client localStorage, metadata only in backend database
+- **Storage Model**: Encrypted mnemonics in client IndexedDB, metadata only in backend database
 - **Security Flow**: Password → Argon2 → AES-256-GCM encryption → Local storage
 
 **Trade-offs Considered**:
@@ -1079,41 +836,36 @@ test("complete wallet setup and transaction flow", async ({ page }) => {
 - **UX**: Password requirements vs convenience of custodial solutions
 - **Support**: Users responsible for key management vs backend-assisted recovery
 
-### 2. Web App vs Chrome Extension vs Mobile App
+### 2. Other Technical Decisions
 
-**Decision**: Start with Web Application
-**Rationale**:
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Platform | Web Application | Fastest iteration, rich UI, can convert to Chrome extension later |
+| State Management | Zustand | Simpler than Redux, excellent TypeScript support, small bundle size |
+| Repository | Monorepo | Single clone, coordinated changes, shared types, unified CI/CD |
+| Database | SQLite | No separate server, single file, sufficient for single-user wallet |
+| Authentication | Password-based KDF | User controls key derivation, no external auth providers needed |
 
-- **Development Focus**: Maximizes time spent on core wallet features vs platform APIs
-- **Development Speed**: Fastest iteration and debugging
-- **Rich UI**: No size constraints for educational interfaces
-- **Easy Demo**: Simple deployment and sharing
-- **Future Flexibility**: Can convert to extension later
+### 3. Backend Language: Rust → Go
 
-**Trade-offs Considered**:
+**Original Decision**: Rust Backend
+**Updated Decision**: Migrating to Go in Phase 1.5
 
-- Security: Web apps less trusted for real funds (acceptable for initial development)
-- Integration: No dApp connection initially (can add later)
-- Distribution: No app store requirements
+**Original Rationale** (for Rust):
 
-### 2. Rust Backend vs Node.js/TypeScript
+- Memory safety for cryptographic operations
+- Performance for crypto computations
+- Compiler-enforced security guarantees
 
-**Decision**: Rust Backend
-**Rationale**:
+**Why migrating to Go**:
 
-- **Memory Safety**: Prevents buffer overflows and memory leaks in crypto operations
-- **Performance**: Critical for cryptographic computations
-- **Security**: Compiler prevents many classes of security vulnerabilities
-- **Industry Standard**: Rust increasingly used for blockchain infrastructure
-- **Ecosystem**: Rich crypto library ecosystem (bip39, secp256k1, ed25519-dalek)
+- Backend no longer handles crypto (moved to frontend in non-custodial refactor)
+- Backend is a simple metadata store and API proxy — Rust's complexity is unnecessary
+- Go offers faster iteration speed for REST API + CRUD workloads
+- Simpler error handling and deployment
+- Single binary deployment (same benefit as Rust)
 
-**Trade-offs Considered**:
-
-- Learning Curve: Rust more complex than TypeScript
-- Development Speed: Initially slower (offset by safety benefits)
-- Ecosystem: TypeScript has broader general ecosystem (Rust crypto ecosystem sufficient)
-
-### 3. Viem vs Ethers.js for Ethereum
+### 4. Viem vs Ethers.js for Ethereum
 
 **Decision**: Viem
 **Rationale**:
@@ -1128,48 +880,6 @@ test("complete wallet setup and transaction flow", async ({ page }) => {
 
 - Documentation: Ethers.js has more tutorials (Viem docs sufficient)
 - Adoption: Ethers.js more widely adopted (Viem gaining rapidly)
-
-### 4. State Management: Zustand vs Redux
-
-**Decision**: Zustand
-**Rationale**:
-
-- **Simplicity**: Less boilerplate for learning project
-- **TypeScript**: Excellent TypeScript support out of the box
-- **Bundle Size**: Significantly smaller than Redux
-- **Developer Experience**: Simpler API and less boilerplate
-- **Sufficient Features**: Meets all wallet state management needs
-
-### 5. Monorepo vs Separate Repositories
-
-**Decision**: Monorepo Structure
-**Rationale**:
-
-- **Simplified Development**: Single clone, coordinated changes
-- **Shared Types**: Easy type sharing between frontend/backend
-- **Unified Tooling**: Single CI/CD pipeline
-- **Development Efficiency**: Easier to manage as single project
-
-### 6. Database: SQLite vs PostgreSQL
-
-**Decision**: SQLite for Development
-**Rationale**:
-
-- **Simplicity**: No separate database server needed
-- **Portability**: Single file, easy backup and migration
-- **Development Focus**: Minimal infrastructure overhead
-- **Performance**: Sufficient for single-user wallet
-- **Production Path**: Can migrate to PostgreSQL if needed
-
-### 7. Authentication Strategy
-
-**Decision**: Password-Based Key Derivation
-**Rationale**:
-
-- **Security**: User controls key derivation password
-- **Simplicity**: No external auth providers needed
-- **Standard Practice**: Common pattern in crypto wallets
-- **Industry Standard**: Common pattern in crypto wallets
 
 ---
 
@@ -1232,7 +942,6 @@ Trade-offs:
 
 #### Additional Blockchains
 
-- **Bitcoin Support**: Native Bitcoin transactions
 - **Cosmos Ecosystem**: IBC transfers and staking
 - **Polkadot Parachain**: DOT and parachain tokens
 - **Layer 2 Expansion**: More L2 solutions (zkSync, StarkNet)
@@ -1274,38 +983,6 @@ Trade-offs:
 - Push notifications
 - Biometric authentication
 
-### Performance Optimizations
-
-#### Frontend Optimizations
-
-- **Code Splitting**: Route-based and component-based
-- **Service Worker**: Offline capability and caching
-- **Virtual Scrolling**: For large transaction lists
-- **Memoization**: Expensive computation caching
-
-#### Backend Optimizations
-
-- **Connection Pooling**: Database and RPC connections
-- **Caching Strategy**: Redis for frequently accessed data
-- **Background Jobs**: Async transaction processing
-- **Horizontal Scaling**: Load balancing for multiple instances
-
-### Developer Experience
-
-#### Tooling Improvements
-
-- **Hot Reload**: Rust backend hot reload for development
-- **Docker Compose**: Simplified local development setup
-- **CLI Tools**: Wallet management command-line interface
-- **Debug Dashboard**: Real-time system monitoring
-
-#### Documentation
-
-- **Interactive Tutorials**: Step-by-step crypto concept guides
-- **API Documentation**: OpenAPI/Swagger integration
-- **Video Walkthroughs**: Visual learning content
-- **Community Guides**: User-contributed content
-
 ### Security Enhancements
 
 #### Advanced Security Features
@@ -1321,42 +998,6 @@ Trade-offs:
 - **Regulatory Compliance**: Jurisdiction-specific requirements
 - **Privacy Features**: Enhanced transaction privacy
 - **Audit Logging**: Comprehensive security logging
-
----
-
-## Getting Started
-
-### Prerequisites
-
-- **Rust**: Latest stable version (rustup recommended)
-- **Node.js**: Version 18+ with npm/yarn
-- **Git**: Version control
-- **Code Editor**: VS Code recommended with Rust and TypeScript extensions
-
-### Initial Setup Commands
-
-```bash
-# Create project structure
-mkdir crypto-wallet && cd crypto-wallet
-
-# Initialize backend
-cargo new --lib backend
-cd backend && cargo add axum tokio serde bip39 bitcoin secp256k1
-
-# Initialize frontend
-cd .. && npx create-next-app@latest frontend --typescript --tailwind --app
-cd frontend && npm install viem @solana/web3.js zustand
-
-# Set up development environment
-# Add configuration files, Docker setup, etc.
-```
-
-### Development Workflow
-
-1. **Start Backend**: `cargo run` in backend directory
-2. **Start Frontend**: `npm run dev` in frontend directory
-3. **Run Tests**: `cargo test` and `npm test`
-4. **Check Security**: `cargo audit` and `npm audit`
 
 ---
 

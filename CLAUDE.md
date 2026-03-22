@@ -2,7 +2,10 @@
 
 ## Project Overview
 
-Non-custodial multi-chain cryptocurrency wallet supporting Bitcoin, Ethereum, and Solana. The frontend (Next.js 16, React 19, TypeScript) handles all cryptographic operations — mnemonic generation, key derivation, transaction signing — while the backend (Rust, Axum) stores only public metadata (wallet names, addresses, timestamps). Private keys and mnemonics never leave the client.
+Non-custodial multi-chain cryptocurrency wallet supporting Bitcoin, Ethereum, and Solana. The frontend (Next.js 16, React 19, TypeScript) handles all cryptographic operations — mnemonic generation, key derivation, transaction signing — while the backend (currently Rust/Axum, migrating to Go in Phase 1.5) stores only public metadata (wallet names, addresses, timestamps). Private keys and mnemonics never leave the client.
+
+For task breakdowns and roadmap, see the Development Roadmap section in `documentations/Crypto-Wallet-Design-Doc.md`.
+For architecture details, see `documentations/Crypto-Wallet-Design-Doc.md`.
 
 ## Quick Start
 
@@ -105,7 +108,9 @@ documentations/             # Architecture design doc, implementation logs, test
 - Tests go in `__tests__/` directories collocated with source (e.g., `lib/crypto/__tests__/mnemonic.test.ts`)
 - Test framework: Vitest with `describe`/`it`/`expect`, happy-dom environment, fake-indexeddb for storage tests
 
-### Backend (Rust)
+### Backend (Rust — migrating to Go in Phase 1.5)
+
+> These conventions apply to the current Rust backend until the Go migration is complete.
 
 - Error handling: `anyhow::Result<T>` with `.context()` for propagation; map to HTTP status codes in handlers
 - Logging: `tracing` crate — `tracing::info!`, `tracing::error!` etc.
@@ -136,7 +141,6 @@ These are non-negotiable for a wallet codebase:
 
 ### Backend
 
-- Cryptographic tests: BIP39, secp256k1, Ed25519, AES-256-GCM, Argon2
 - API tests: endpoint validation, error responses
 - Database tests: CRUD operations, foreign key cascades
 
