@@ -45,7 +45,9 @@ Analyze the staged diff (`git diff --cached`) and create a commit message:
 
 If the user provided `$ARGUMENTS`, use that as the commit message instead of auto-generating one (still append the Co-Authored-By).
 
-Create the commit using a HEREDOC format:
+**Before committing, present the draft commit message to the user and ask them to approve or edit it.** Do NOT run `git commit` until the user confirms. If the user provides edits, incorporate them.
+
+Once approved, create the commit using a HEREDOC format:
 ```
 git commit -m "$(cat <<'EOF'
 <commit message here>
