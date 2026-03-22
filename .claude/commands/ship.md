@@ -40,6 +40,7 @@ Analyze the staged diff (`git diff --cached`) and create a commit message:
 - Use conventional commit format: `feat:`, `fix:`, `refactor:`, `chore:`, `docs:`, `test:`, etc.
 - First line: concise summary under 72 characters
 - If the changes are substantial, add a blank line followed by bullet points explaining the key changes
+- Check if the changes implement (partially or fully) a task from the Development Roadmap in `documentations/Crypto-Wallet-Design-Doc.md`. If so, include the task label in the first line (e.g., `feat(P1-FE-T4): create wallet creation UI`). If the changes are not related to a roadmap task, omit the label.
 - End with: `Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>`
 
 If the user provided `$ARGUMENTS`, use that as the commit message instead of auto-generating one (still append the Co-Authored-By).
