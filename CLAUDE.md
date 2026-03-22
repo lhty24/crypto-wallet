@@ -97,7 +97,7 @@ documentations/             # Architecture design doc, implementation logs, test
 ### General
 
 - **Naming**: camelCase (variables/functions), PascalCase (types/components), UPPER_SNAKE_CASE (constants)
-- **Commit messages**: Conventional prefixes — `feat:`, `fix:`, `chore:`, `refactor:` with task references (e.g., `P1-W2-FE-T3`)
+- **Commit messages**: Conventional prefixes — `feat:`, `fix:`, `chore:`, `refactor:` with task references (e.g., `P1-FE-T4`)
 - **API types**: snake_case fields (matching Rust serde serialization)
 
 ### Frontend (TypeScript)
@@ -133,7 +133,7 @@ These are non-negotiable for a wallet codebase:
 
 ## Testing
 
-### Frontend (~190 tests)
+### Frontend (~205 tests)
 
 - **Crypto** (~67 tests): mnemonic generation/validation, encryption round-trips, HD wallet derivation for all 3 chains, secure memory cleanup
 - **Storage** (~70 tests): IndexedDB CRUD, session manager timers, wallet service lifecycle

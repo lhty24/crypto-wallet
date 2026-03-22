@@ -17,6 +17,11 @@ const SALT_LENGTH = 32;
 const NONCE_LENGTH = 12;
 const KEY_LENGTH = 32;
 
+// TS 5.7+ requires strict ArrayBuffer for Web Crypto APIs
+function toBuffer(data: Uint8Array): ArrayBuffer {
+  return data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer;
+}
+
 /**
  * Container for encrypted data with all components needed for decryption
  */
@@ -66,7 +71,7 @@ export async function encrypt(
   // Import key for Web Crypto API
   const cryptoKey = await crypto.subtle.importKey(
     "raw",
-    key,
+    toBuffer(key),
     "AES-GCM",
     false,
     ["encrypt"]
@@ -77,9 +82,9 @@ export async function encrypt(
 
   // Encrypt
   const ciphertextBuffer = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv: nonce },
+    { name: "AES-GCM", iv: toBuffer(nonce) },
     cryptoKey,
-    plaintextBytes
+    toBuffer(plaintextBytes)
   );
 
   return {
@@ -110,7 +115,7 @@ export async function decrypt(
   // Import key for Web Crypto API
   const cryptoKey = await crypto.subtle.importKey(
     "raw",
-    key,
+    toBuffer(key),
     "AES-GCM",
     false,
     ["decrypt"]
@@ -118,9 +123,9 @@ export async function decrypt(
 
   // Decrypt
   const plaintextBuffer = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv: encryptedData.nonce },
+    { name: "AES-GCM", iv: toBuffer(encryptedData.nonce) },
     cryptoKey,
-    encryptedData.ciphertext
+    toBuffer(encryptedData.ciphertext)
   );
 
   // Convert bytes back to string

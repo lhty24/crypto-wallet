@@ -8,7 +8,7 @@ Read the Development Roadmap in `documentations/Crypto-Wallet-Design-Doc.md`. Fi
 
 Cross-reference with recent git history (`git log --oneline -15`) to confirm what's actually been completed.
 
-**Output**: State the task ID (e.g., P1-W2-FE-T4), its title, and which phase/section it belongs to.
+**Output**: State the task ID (e.g., P1-FE-T4), its title, and which phase/section it belongs to.
 
 ## Step 2: Break Down the Task
 
@@ -46,7 +46,7 @@ Give a concise explanation for the implementation plan.
 
 ## Step 4: Save the Plan
 
-Save the implementation plan as a markdown file in `documentations/plans/` named after the task ID (e.g., `documentations/plans/P1-W2-FE-T4.md`). Create the directory if it does not exist.
+Save the implementation plan as a markdown file in `documentations/plans/` named after the task ID (e.g., `documentations/plans/P1-FE-T4.md`). Create the directory if it does not exist.
 
 ## Step 5: Ask for Permission
 
