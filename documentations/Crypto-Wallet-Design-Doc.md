@@ -394,10 +394,10 @@ function withSecureCleanup<T>(
   - [x] Wallet operations (create, import, unlock, lock, delete)
   - [x] Auto-timeout and security features
 - [x] T3: Implement API client for metadata-only backend communication ✅
-- [ ] T4: Create wallet creation/import UI with client-side crypto
-  - [ ] Mnemonic generation and display
-  - [ ] Password entry and validation
-  - [ ] Mnemonic backup confirmation flow
+- [x] T4: Create wallet creation/import UI with client-side crypto ✅
+  - [x] Mnemonic generation and display
+  - [x] Password entry and validation
+  - [x] Mnemonic backup confirmation flow
 - [ ] T5: Create wallet dashboard with locally-stored encrypted wallets
   - [ ] Wallet listing from local storage
   - [ ] Unlock/lock interface

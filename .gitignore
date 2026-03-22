@@ -284,6 +284,10 @@ target/clippy/
 !CONTRIBUTING.md
 !*.md
 
+# Include source code files (may match security globs like *mnemonic*)
+!*.ts
+!*.tsx
+
 # Include important configuration files
 !Cargo.toml
 !package.json
