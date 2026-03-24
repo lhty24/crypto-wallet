@@ -11,6 +11,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
+import NavBar from '@/components/wallet/NavBar';
 
 // Load Inter font with Latin subset for better performance
 const inter = Inter({ subsets: ['latin'] });
@@ -72,28 +73,7 @@ export default function RootLayout({
       <body className={`${inter.className} h-full bg-gray-50 dark:bg-gray-900`}>
         {/* Main application container */}
         <div className="min-h-full">
-          {/* Navigation will be enhanced in future tasks */}
-          <nav className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex justify-between items-center h-16">
-                <div className="flex items-center">
-                  <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-                    🔐 CryptoWallet
-                  </h1>
-                </div>
-                
-                <div className="flex items-center space-x-4">
-                  {/* Wallet status indicator */}
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      Locked
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </nav>
+          <NavBar />
           
           {/* Main content area */}
           <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">

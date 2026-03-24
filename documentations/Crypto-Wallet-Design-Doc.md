@@ -398,10 +398,10 @@ function withSecureCleanup<T>(
   - [x] Mnemonic generation and display
   - [x] Password entry and validation
   - [x] Mnemonic backup confirmation flow
-- [ ] T5: Create wallet dashboard with locally-stored encrypted wallets
-  - [ ] Wallet listing from local storage
-  - [ ] Unlock/lock interface
-  - [ ] Account derivation and display
+- [x] T5: Create wallet dashboard with locally-stored encrypted wallets ✅
+  - [x] Wallet listing from local storage
+  - [x] Unlock/lock interface
+  - [x] Account derivation and display
 - [ ] T6: Add basic balance display (mock data initially)
 
 **Integration**:

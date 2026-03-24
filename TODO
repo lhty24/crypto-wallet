@@ -19,8 +19,8 @@ Phase 1 — Foundation:
     ✔ T1: Client-side cryptographic functionality (BIP39, AES-256-GCM + Argon2, BIP32/BIP44, secure memory)
     ✔ T2: Secure client-side storage management (IndexedDB, wallet ops, auto-timeout)
     ✔ T3: API client for metadata-only backend communication
-    ☐ T4: Wallet creation/import UI (mnemonic display, password entry, backup confirmation)
-    ☐ T5: Wallet dashboard (wallet listing, unlock/lock, account derivation)
+    ✔ T4: Wallet creation/import UI (mnemonic display, password entry, backup confirmation) @started(26-03-22 02:09) @done(26-03-22 15:55) @lasted(13h46m56s)
+    ☐ T5: Wallet dashboard (wallet listing, unlock/lock, account derivation) @started(26-03-22 16:01)
     ☐ T6: Basic balance display (mock data)
 
   Integration:
