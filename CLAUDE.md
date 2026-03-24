@@ -133,11 +133,12 @@ These are non-negotiable for a wallet codebase:
 
 ## Testing
 
-### Frontend (~205 tests)
+### Frontend (~213 tests)
 
 - **Crypto** (~67 tests): mnemonic generation/validation, encryption round-trips, HD wallet derivation for all 3 chains, secure memory cleanup
 - **Storage** (~70 tests): IndexedDB CRUD, session manager timers, wallet service lifecycle
 - **API** (~53 tests): HTTP client error handling, wallet API function correctness
+- **Dashboard** (~8 tests): account population on unlock, lock/unlock state, wallet loading, wallet deletion
 
 ### Backend
 
@@ -172,6 +173,8 @@ cd backend && cargo test test_name -- --nocapture
 | API client wrapper          | `frontend/src/lib/api/client.ts`             |
 | API type definitions        | `frontend/src/lib/api/types.ts`              |
 | IndexedDB storage           | `frontend/src/lib/storage/indexedDB.ts`      |
+| Wallet dashboard            | `frontend/src/components/wallet/WalletDashboard.tsx` |
+| Navigation bar              | `frontend/src/components/wallet/NavBar.tsx`  |
 | Backend routes & middleware | `backend/src/api/server.rs`                  |
 | Backend wallet handlers     | `backend/src/api/wallet.rs`                  |
 | Database operations         | `backend/src/database/wallet.rs`             |

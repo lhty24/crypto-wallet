@@ -1,20 +1,65 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import CreateWalletFlow from '@/components/wallet/CreateWalletFlow';
 import ImportWalletFlow from '@/components/wallet/ImportWalletFlow';
+import WalletDashboard from '@/components/wallet/WalletDashboard';
+import { loadWallets } from '@/lib/storage/walletService';
 
-type View = 'welcome' | 'create' | 'import';
+type View = 'welcome' | 'create' | 'import' | 'dashboard';
 
 export default function WalletWelcome() {
   const [view, setView] = useState<View>('welcome');
+  const [isLoading, setIsLoading] = useState(true);
+
+  const checkWallets = useCallback(async () => {
+    try {
+      const wallets = await loadWallets();
+      if (wallets.length > 0) {
+        setView('dashboard');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    checkWallets();
+  }, [checkWallets]);
+
+  if (isLoading) {
+    return (
+      <div className="max-w-md mx-auto text-center py-12">
+        <p className="text-gray-500 dark:text-gray-400">Loading...</p>
+      </div>
+    );
+  }
 
   if (view === 'create') {
-    return <CreateWalletFlow onComplete={() => setView('welcome')} onCancel={() => setView('welcome')} />;
+    return (
+      <CreateWalletFlow
+        onComplete={() => { checkWallets(); setView('dashboard'); }}
+        onCancel={() => setView('dashboard')}
+      />
+    );
   }
 
   if (view === 'import') {
-    return <ImportWalletFlow onComplete={() => setView('welcome')} onCancel={() => setView('welcome')} />;
+    return (
+      <ImportWalletFlow
+        onComplete={() => { checkWallets(); setView('dashboard'); }}
+        onCancel={() => setView('dashboard')}
+      />
+    );
+  }
+
+  if (view === 'dashboard') {
+    return (
+      <WalletDashboard
+        onCreateWallet={() => setView('create')}
+        onImportWallet={() => setView('import')}
+      />
+    );
   }
 
   return (

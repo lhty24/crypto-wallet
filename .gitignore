@@ -182,6 +182,10 @@ $RECYCLE.BIN/
 # DOCUMENTATION AND GENERATED FILES
 # =============================================================================
 
+# Project documentation and task tracking
+TODO
+/documentations/
+
 # Documentation build outputs (keep source .md files)
 /target/doc/
 docs/build/

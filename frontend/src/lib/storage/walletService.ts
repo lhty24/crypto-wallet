@@ -33,9 +33,51 @@ import {
 } from "./indexedDB";
 import { startAutoLock, stopAutoLock, resetActivity } from "./sessionManager";
 import { useWalletStore } from "../stores/walletStore";
+import type { Account } from "../types/wallet";
 
 // Auto-lock timeout: 5 minutes
 const AUTO_LOCK_TIMEOUT_MS = 5 * 60 * 1000;
+
+/**
+ * Builds Account[] from StoredWallet.addresses
+ *
+ * Maps the public addresses stored in IndexedDB into Account objects
+ * for use in the Zustand store. No re-derivation needed.
+ */
+function buildAccountsFromAddresses(addresses: StoredWallet["addresses"]): Account[] {
+  const accounts: Account[] = [];
+  if (addresses.ethereum) {
+    accounts.push({
+      id: "eth-0",
+      name: "Ethereum Account",
+      address: addresses.ethereum,
+      chain: "Ethereum",
+      derivationPath: "m/44'/60'/0'/0/0",
+      accountIndex: 0,
+    });
+  }
+  if (addresses.bitcoin) {
+    accounts.push({
+      id: "btc-0",
+      name: "Bitcoin Account",
+      address: addresses.bitcoin,
+      chain: "Bitcoin",
+      derivationPath: "m/44'/0'/0'/0/0",
+      accountIndex: 0,
+    });
+  }
+  if (addresses.solana) {
+    accounts.push({
+      id: "sol-0",
+      name: "Solana Account",
+      address: addresses.solana,
+      chain: "Solana",
+      derivationPath: "m/44'/501'/0'/0'",
+      accountIndex: 0,
+    });
+  }
+  return accounts;
+}
 
 // In-memory storage for sensitive data (cleared on lock)
 let decryptedMnemonic: string | null = null;
@@ -214,8 +256,8 @@ export async function unlockWallet(
   actions.setWallet({
     id: storedWallet.id,
     name: storedWallet.name,
-    isLocked: false, // Wallet is now unlocked
-    accounts: [],
+    isLocked: false,
+    accounts: buildAccountsFromAddresses(storedWallet.addresses),
     createdAt: new Date(storedWallet.createdAt).toISOString(),
   });
   actions.unlockWallet();
