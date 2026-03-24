@@ -133,12 +133,13 @@ These are non-negotiable for a wallet codebase:
 
 ## Testing
 
-### Frontend (~213 tests)
+### Frontend (~231 tests)
 
 - **Crypto** (~67 tests): mnemonic generation/validation, encryption round-trips, HD wallet derivation for all 3 chains, secure memory cleanup
 - **Storage** (~70 tests): IndexedDB CRUD, session manager timers, wallet service lifecycle
 - **API** (~53 tests): HTTP client error handling, wallet API function correctness
 - **Dashboard** (~8 tests): account population on unlock, lock/unlock state, wallet loading, wallet deletion
+- **Balance** (~18 tests): balance service API/mock fallback, balance formatting, AccountCard balance display
 
 ### Backend
 

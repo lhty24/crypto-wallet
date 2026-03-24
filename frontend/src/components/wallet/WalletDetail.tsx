@@ -1,7 +1,9 @@
 'use client';
 
-import { useWallet, useIsUnlocked } from '@/lib/stores/walletStore';
+import { useEffect, useState } from 'react';
+import { useWallet, useIsUnlocked, useWalletStore } from '@/lib/stores/walletStore';
 import { lockWallet } from '@/lib/storage/walletService';
+import { fetchBalancesForWallet } from '@/lib/storage/balanceService';
 import AccountCard from './AccountCard';
 
 interface WalletDetailProps {
@@ -11,6 +13,21 @@ interface WalletDetailProps {
 export default function WalletDetail({ onLocked }: WalletDetailProps) {
   const wallet = useWallet();
   const isUnlocked = useIsUnlocked();
+  const balances = useWalletStore((state) => state.balances);
+  const [balanceLoading, setBalanceLoading] = useState(true);
+
+  useEffect(() => {
+    if (!wallet || !isUnlocked) return;
+
+    let cancelled = false;
+    setBalanceLoading(true);
+
+    fetchBalancesForWallet(wallet.id, wallet.accounts).finally(() => {
+      if (!cancelled) setBalanceLoading(false);
+    });
+
+    return () => { cancelled = true; };
+  }, [wallet, isUnlocked]);
 
   const handleLock = () => {
     lockWallet();
@@ -19,6 +36,16 @@ export default function WalletDetail({ onLocked }: WalletDetailProps) {
 
   if (!wallet || !isUnlocked) {
     return null;
+  }
+
+  // Compute total balance summary per chain
+  const totalByChain: Record<string, number> = {};
+  for (const account of wallet.accounts) {
+    const bal = balances[account.id];
+    if (bal) {
+      const value = parseFloat(bal.nativeBalance) || 0;
+      totalByChain[bal.chain] = (totalByChain[bal.chain] || 0) + value;
+    }
   }
 
   return (
@@ -40,16 +67,39 @@ export default function WalletDetail({ onLocked }: WalletDetailProps) {
         </button>
       </div>
 
+      {/* Portfolio Balance Summary */}
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg p-5 text-white">
+        <p className="text-sm font-medium text-blue-200 mb-2">Portfolio Balance</p>
+        {balanceLoading ? (
+          <p className="text-lg font-semibold">Loading balances...</p>
+        ) : Object.keys(totalByChain).length > 0 ? (
+          <div className="space-y-1">
+            {Object.entries(totalByChain).map(([chain, total]) => (
+              <p key={chain} className="text-lg font-semibold">
+                {total.toFixed(chain === 'Bitcoin' ? 8 : 4)} {chain === 'Bitcoin' ? 'BTC' : chain === 'Ethereum' ? 'ETH' : 'SOL'}
+              </p>
+            ))}
+          </div>
+        ) : (
+          <p className="text-lg font-semibold">No balances available</p>
+        )}
+        <p className="text-xs text-blue-300 mt-2">Mock data — real balances coming in Phase 2</p>
+      </div>
+
       <div className="space-y-3">
         <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Accounts</h3>
-        {wallet.accounts.map((account) => (
-          <AccountCard
-            key={account.id}
-            chain={account.chain}
-            address={account.address}
-            derivationPath={account.derivationPath}
-          />
-        ))}
+        {wallet.accounts.map((account) => {
+          const bal = balances[account.id];
+          return (
+            <AccountCard
+              key={account.id}
+              chain={account.chain}
+              address={account.address}
+              derivationPath={account.derivationPath}
+              formattedBalance={balanceLoading ? undefined : bal?.formattedBalance}
+            />
+          );
+        })}
       </div>
     </div>
   );

@@ -7,9 +7,10 @@ interface AccountCardProps {
   chain: Chain;
   address: string;
   derivationPath: string;
+  formattedBalance?: string;
 }
 
-export default function AccountCard({ chain, address, derivationPath }: AccountCardProps) {
+export default function AccountCard({ chain, address, derivationPath, formattedBalance }: AccountCardProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -23,6 +24,11 @@ export default function AccountCard({ chain, address, derivationPath }: AccountC
       <div className="flex items-center justify-between mb-2">
         <h3 className="font-semibold text-gray-900 dark:text-white">{chain}</h3>
         <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">{derivationPath}</span>
+      </div>
+      <div className="mb-2">
+        <span className="text-lg font-bold text-gray-900 dark:text-white">
+          {formattedBalance ?? 'Loading...'}
+        </span>
       </div>
       <div className="flex items-center gap-2">
         <code className="flex-1 text-sm text-gray-700 dark:text-gray-300 font-mono break-all">
