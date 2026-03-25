@@ -44,14 +44,18 @@ Give a concise explanation for the implementation plan.
 
 **Output**: A concise, actionable plan organized by sub-task.
 
-## Step 4: Save the Plan
+## Step 4: Ask for Permission
 
-Save the implementation plan as a markdown file in `documentations/plans/` named after the task ID (e.g., `documentations/plans/P1-FE-T4.md`). Create the directory if it does not exist.
-
-## Step 5: Ask for Permission
-
-After presenting the plan, ask the user:
+Present the full plan to the user and ask:
 
 > Ready to start implementing **[Task ID]: [Task Title]**? I can begin with [first sub-task]. Want me to proceed, or would you like to adjust the plan?
 
-Do NOT start implementation until the user confirms.
+Do NOT save the plan or start implementation until the user explicitly approves. If the user requests edits, incorporate them and present the updated plan again for approval.
+
+## Step 5: Save the Plan
+
+Once the user approves, save the final implementation plan as a markdown file in `documentations/plans/` named after the task ID (e.g., `documentations/plans/P1-FE-T4.md`). Create the directory if it does not exist.
+
+## Step 6: Begin Implementation
+
+Start implementing the first sub-task.
