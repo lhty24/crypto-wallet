@@ -65,21 +65,44 @@ pub struct AddressResponse {
     message: String,         // Success message
 }
 
-// Error response structure, could be used later for detailed error responses
-// #[derive(Serialize)]
-// pub struct ErrorResponse {
-//     error: String, // Error message
-//     code: String,  // Error code (e.g., "INVALID_MNEMONIC")
-// }
+/// Standardized JSON error response for all API errors
+#[derive(Serialize)]
+pub struct ErrorResponse {
+    error: String,
+}
+
+/// Axum trait implementation so (StatusCode, Json<ErrorResponse>) works as a handler error type
+impl axum::response::IntoResponse for ErrorResponse {
+    fn into_response(self) -> axum::response::Response {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            ResponseJson(self),
+        )
+            .into_response()
+    }
+}
+
+/// Helper to create a consistent JSON error response tuple
+fn error_response(
+    status: StatusCode,
+    message: &str,
+) -> (StatusCode, ResponseJson<ErrorResponse>) {
+    (
+        status,
+        ResponseJson(ErrorResponse {
+            error: message.to_string(),
+        }),
+    )
+}
 
 // POST /wallet/create handler
 pub async fn create_wallet(
     State(pool): State<DbPool>,
     Json(request): Json<CreateWalletRequest>,
-) -> Result<ResponseJson<WalletResponse>, StatusCode> {
+) -> Result<ResponseJson<WalletResponse>, (StatusCode, ResponseJson<ErrorResponse>)> {
     if let Err(error_msg) = validate_create_request(&request) {
         tracing::warn!("Wallet creation validation failed: {error_msg}");
-        return Err(StatusCode::BAD_REQUEST);
+        return Err(error_response(StatusCode::BAD_REQUEST, &error_msg));
     }
 
     // Generate wallet ID and call database
@@ -88,7 +111,7 @@ pub async fn create_wallet(
         .await
         .map_err(|e| {
             tracing::error!("Failed to create wallet in database: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
+            error_response(StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
         })?;
     tracing::info!(
         "Created new wallet with ID: {} at: {}",
@@ -108,10 +131,10 @@ pub async fn create_wallet(
 pub async fn import_wallet(
     State(pool): State<DbPool>,
     Json(request): Json<ImportWalletRequest>,
-) -> Result<ResponseJson<WalletResponse>, StatusCode> {
+) -> Result<ResponseJson<WalletResponse>, (StatusCode, ResponseJson<ErrorResponse>)> {
     if let Err(error_msg) = validate_import_request(&request) {
         tracing::warn!("Wallet import validation failed: {error_msg}");
-        return Err(StatusCode::BAD_REQUEST);
+        return Err(error_response(StatusCode::BAD_REQUEST, &error_msg));
     }
 
     // Generate wallet ID for metadata record
@@ -121,7 +144,7 @@ pub async fn import_wallet(
         .await
         .map_err(|e| {
             tracing::error!("Failed to import wallet in database: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
+            error_response(StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
         })?;
 
     tracing::info!(
@@ -144,11 +167,11 @@ pub async fn update_wallet(
     State(pool): State<DbPool>,
     Path(wallet_id): Path<String>,
     Json(request): Json<UpdateWalletRequest>,
-) -> Result<ResponseJson<WalletResponse>, StatusCode> {
+) -> Result<ResponseJson<WalletResponse>, (StatusCode, ResponseJson<ErrorResponse>)> {
     // Validate the request
     if let Err(error_msg) = validate_update_request(&request) {
         tracing::warn!("Wallet update validation failed: {error_msg}");
-        return Err(StatusCode::BAD_REQUEST);
+        return Err(error_response(StatusCode::BAD_REQUEST, &error_msg));
     }
 
     // Update the wallet name
@@ -156,11 +179,11 @@ pub async fn update_wallet(
         .await
         .map_err(|e| {
             tracing::error!("Failed to update wallet: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
+            error_response(StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
         })?
         .ok_or_else(|| {
             tracing::warn!("Attempt to update non-existent wallet: {}", wallet_id);
-            StatusCode::NOT_FOUND
+            error_response(StatusCode::NOT_FOUND, "Wallet not found")
         })?;
 
     tracing::info!("Updated wallet {} name to: {}", wallet_id, request.name);
@@ -177,18 +200,18 @@ pub async fn update_wallet(
 pub async fn delete_wallet(
     State(pool): State<DbPool>,
     Path(wallet_id): Path<String>,
-) -> Result<ResponseJson<DeleteWalletResponse>, StatusCode> {
+) -> Result<ResponseJson<DeleteWalletResponse>, (StatusCode, ResponseJson<ErrorResponse>)> {
     // Delete the wallet
     let deleted = database::delete_wallet(&pool, &wallet_id)
         .await
         .map_err(|e| {
             tracing::error!("Failed to delete wallet: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
+            error_response(StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
         })?;
 
     if !deleted {
         tracing::warn!("Attempt to delete non-existent wallet: {}", wallet_id);
-        return Err(StatusCode::NOT_FOUND);
+        return Err(error_response(StatusCode::NOT_FOUND, "Wallet not found"));
     }
 
     tracing::info!("Successfully deleted wallet: {}", wallet_id);
@@ -205,11 +228,11 @@ pub async fn register_address(
     State(pool): State<DbPool>,
     Path(wallet_id): Path<String>, // Extract {id} from URL
     Json(request): Json<RegisterAddressRequest>,
-) -> Result<ResponseJson<AddressResponse>, StatusCode> {
+) -> Result<ResponseJson<AddressResponse>, (StatusCode, ResponseJson<ErrorResponse>)> {
     // Validate the request
     if let Err(error_msg) = validate_address_request(&request) {
         tracing::warn!("Address registration validation failed: {error_msg}");
-        return Err(StatusCode::BAD_REQUEST);
+        return Err(error_response(StatusCode::BAD_REQUEST, &error_msg));
     }
 
     // Verify wallet exists before adding address
@@ -217,14 +240,14 @@ pub async fn register_address(
         .await
         .map_err(|e| {
             tracing::error!("Failed to check wallet existence: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
+            error_response(StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
         })?
         .ok_or_else(|| {
             tracing::warn!(
                 "Attempt to register address for non-existent wallet: {}",
                 wallet_id
             );
-            StatusCode::NOT_FOUND
+            error_response(StatusCode::NOT_FOUND, "Wallet not found")
         })?;
 
     // Register the address
@@ -238,7 +261,7 @@ pub async fn register_address(
     .await
     .map_err(|e| {
         tracing::error!("Failed to register address: {:?}", e);
-        StatusCode::INTERNAL_SERVER_ERROR
+        error_response(StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
     })?;
 
     tracing::info!(
@@ -264,11 +287,11 @@ pub async fn register_address(
 // output: array of wallet metadata
 pub async fn get_wallets(
     State(pool): State<DbPool>,
-) -> Result<ResponseJson<Vec<WalletResponse>>, StatusCode> {
+) -> Result<ResponseJson<Vec<WalletResponse>>, (StatusCode, ResponseJson<ErrorResponse>)> {
     // get array of wallets from db
     let wallets = database::list_wallets(&pool).await.map_err(|e| {
         tracing::error!("Failed to list wallets from database: {:?}", e);
-        StatusCode::INTERNAL_SERVER_ERROR
+        error_response(StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
     })?;
 
     // re-format wallet array into proper response
@@ -292,12 +315,12 @@ pub async fn register_wallet(
     State(pool): State<DbPool>,
     wallet_name: &str,
     wallet_id: &str,
-) -> Result<ResponseJson<WalletResponse>, StatusCode> {
+) -> Result<ResponseJson<WalletResponse>, (StatusCode, ResponseJson<ErrorResponse>)> {
     let wallet = database::create_wallet(&pool, &wallet_name, &wallet_id)
         .await
         .map_err(|e| {
             tracing::error!("Failed to register the wallet: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
+            error_response(StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
         })?;
 
     let wallet_response: WalletResponse = WalletResponse {
@@ -326,7 +349,7 @@ pub async fn register_wallet(
 pub async fn get_wallet_balance(
     State(pool): State<DbPool>,    // Database connection pool from app state
     Path(wallet_id): Path<String>, // Extract {id} from URL path
-) -> Result<ResponseJson<WalletBalanceResponse>, StatusCode> {
+) -> Result<ResponseJson<WalletBalanceResponse>, (StatusCode, ResponseJson<ErrorResponse>)> {
     // 1. Verify wallet exists (returns 404 if not found)
     verify_wallet_exists(&pool, &wallet_id).await?;
 
@@ -335,7 +358,7 @@ pub async fn get_wallet_balance(
         .await
         .map_err(|e| {
             tracing::error!("Failed to fetch wallet addresses: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
+            error_response(StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
         })?;
 
     // 3. Transform database records into API response format
@@ -377,7 +400,7 @@ pub async fn get_wallet_balance(
 pub async fn get_transaction_history(
     State(pool): State<DbPool>,
     Path(wallet_id): Path<String>,
-) -> Result<ResponseJson<WalletTransactionResponse>, StatusCode> {
+) -> Result<ResponseJson<WalletTransactionResponse>, (StatusCode, ResponseJson<ErrorResponse>)> {
     // 1. Verify wallet exists (returns 404 if not found)
     verify_wallet_exists(&pool, &wallet_id).await?;
 
@@ -417,14 +440,14 @@ pub async fn broadcast_transaction(
     State(pool): State<DbPool>,
     Path(wallet_id): Path<String>,
     Json(request): Json<BroadcastTransactionRequest>, // Axum auto-parses JSON body
-) -> Result<ResponseJson<BroadcastTransactionResponse>, StatusCode> {
+) -> Result<ResponseJson<BroadcastTransactionResponse>, (StatusCode, ResponseJson<ErrorResponse>)> {
     // 1. Verify wallet exists (returns 404 if not found)
     verify_wallet_exists(&pool, &wallet_id).await?;
 
     // 2. Validate request: chain must be supported, signed_tx must not be empty
     if let Err(error_msg) = validate_broadcast_request(&request) {
         tracing::warn!("Broadcast validation failed: {}", error_msg);
-        return Err(StatusCode::BAD_REQUEST);
+        return Err(error_response(StatusCode::BAD_REQUEST, &error_msg));
     }
 
     // 3. Generate mock transaction hash (real RPC broadcast comes later)
@@ -528,19 +551,20 @@ fn validate_address_request(request: &RegisterAddressRequest) -> Result<(), Stri
 /// # Note on the `?` operator
 /// The `?` returns from THIS function, not the caller. The caller must also
 /// use `?` or handle the Result to propagate errors to Axum.
-async fn verify_wallet_exists(pool: &DbPool, wallet_id: &str) -> Result<(), StatusCode> {
+async fn verify_wallet_exists(
+    pool: &DbPool,
+    wallet_id: &str,
+) -> Result<(), (StatusCode, ResponseJson<ErrorResponse>)> {
     database::get_wallet_by_id(pool, wallet_id)
         .await
         .map_err(|e| {
-            // Convert anyhow::Error -> StatusCode
             tracing::error!("Failed to check wallet existence: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })? // Early return if database error
+            error_response(StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
+        })?
         .ok_or_else(|| {
-            // Convert Option<Wallet> -> Result
             tracing::warn!("Wallet not found: {}", wallet_id);
-            StatusCode::NOT_FOUND
-        })?; // Early return if wallet not found
+            error_response(StatusCode::NOT_FOUND, "Wallet not found")
+        })?;
 
     Ok(())
 }

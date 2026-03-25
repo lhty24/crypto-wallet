@@ -53,6 +53,7 @@ export async function request<T>(
       ...options,
       headers: {
         "Content-Type": "application/json",
+        "X-Requested-With": "CryptoWallet",
         // Spread caller's headers last so they can override defaults
         ...options.headers,
       },

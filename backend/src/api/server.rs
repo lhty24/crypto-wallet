@@ -1,7 +1,9 @@
 use crate::api::wallet;
 use crate::database::{init_database, DbPool};
 use anyhow::{Context, Result};
-use axum::extract::State;
+use axum::extract::{Request, State};
+use axum::middleware::Next;
+use axum::response::Response;
 use axum::{
     http::{self, HeaderValue},
     routing::{delete, get, post, put},
@@ -44,7 +46,7 @@ pub async fn run() -> Result<()> {
 }
 
 /// Create the main application router with middleware stack
-fn create_app(pool: DbPool) -> Router {
+pub fn create_app(pool: DbPool) -> Router {
     Router::new()
         .route("/", get(root))
         .route("/health", get(health_check))
@@ -64,6 +66,8 @@ fn create_app(pool: DbPool) -> Router {
             post(wallet::broadcast_transaction),
         )
         .with_state(pool)
+        .layer(axum::middleware::from_fn(security_headers))
+        .layer(axum::middleware::from_fn(require_custom_header))
         .layer(configure_cors()) // CORS must be before other middleware
         .layer(configure_json_middleware()) // 16KB request limit for security
         .layer(TraceLayer::new_for_http()) // HTTP request/response logging
@@ -90,10 +94,17 @@ async fn health_check(State(pool): State<DbPool>) -> &'static str {
     }
 }
 
-/// Configure CORS to allow frontend (localhost:3000) access
+/// Configure CORS with environment-configurable origin
 fn configure_cors() -> CorsLayer {
+    let origin = std::env::var("CORS_ORIGIN")
+        .unwrap_or_else(|_| "http://localhost:3000".to_string());
+
     CorsLayer::new()
-        .allow_origin("http://localhost:3000".parse::<HeaderValue>().unwrap())
+        .allow_origin(
+            origin
+                .parse::<HeaderValue>()
+                .expect("Invalid CORS_ORIGIN value"),
+        )
         .allow_methods([
             http::Method::GET,
             http::Method::POST,
@@ -105,6 +116,7 @@ fn configure_cors() -> CorsLayer {
             http::header::CONTENT_TYPE,
             http::header::AUTHORIZATION, // For future wallet authentication
             http::header::ACCEPT,
+            "x-requested-with".parse().unwrap(), // Custom header for CSRF defense
         ])
         .allow_credentials(true) // Enable cookies/auth tokens
         .max_age(std::time::Duration::from_secs(3600)) // Cache preflight for 1 hour
@@ -113,6 +125,45 @@ fn configure_cors() -> CorsLayer {
 /// Limit request body size to 16KB to prevent DoS attacks
 fn configure_json_middleware() -> RequestBodyLimitLayer {
     RequestBodyLimitLayer::new(16 * 1024) // 16KB sufficient for all wallet operations
+}
+
+/// Reject state-changing requests missing X-Requested-With: CryptoWallet
+async fn require_custom_header(req: Request, next: Next) -> Response {
+    let method = req.method().clone();
+    let needs_check = matches!(
+        method,
+        http::Method::POST | http::Method::PUT | http::Method::DELETE
+    );
+
+    if needs_check {
+        let has_header = req
+            .headers()
+            .get("x-requested-with")
+            .and_then(|v| v.to_str().ok())
+            == Some("CryptoWallet");
+
+        if !has_header {
+            return Response::builder()
+                .status(http::StatusCode::FORBIDDEN)
+                .header("Content-Type", "application/json")
+                .body(axum::body::Body::from(
+                    r#"{"error":"Missing required X-Requested-With header"}"#,
+                ))
+                .unwrap();
+        }
+    }
+
+    next.run(req).await
+}
+
+/// Add security headers to all responses
+async fn security_headers(req: Request, next: Next) -> Response {
+    let mut response = next.run(req).await;
+    let headers = response.headers_mut();
+    headers.insert("X-Content-Type-Options", "nosniff".parse().unwrap());
+    headers.insert("X-Frame-Options", "DENY".parse().unwrap());
+    headers.insert("Cache-Control", "no-store".parse().unwrap());
+    response
 }
 
 /// Handle graceful shutdown on SIGTERM or Ctrl+C
