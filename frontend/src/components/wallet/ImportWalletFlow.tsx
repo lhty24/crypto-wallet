@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import { importWallet } from '@/lib/storage/walletService';
 import { validateMnemonic } from '@/lib/crypto/mnemonic';
+import { showSuccess, showError } from '@/lib/utils/toast';
 import { validateWalletName, validatePassword } from './validation';
 import WalletNameInput from './WalletNameInput';
 import PasswordForm from './PasswordForm';
@@ -45,8 +46,11 @@ export default function ImportWalletFlow({ onComplete, onCancel }: ImportWalletF
       await importWallet(walletName.trim(), trimmedMnemonic, password);
       setMnemonic('');
       setSuccess(true);
+      showSuccess('Wallet imported successfully');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to import wallet');
+      const msg = e instanceof Error ? e.message : 'Failed to import wallet';
+      setError(msg);
+      showError(msg);
     } finally {
       setIsImporting(false);
     }

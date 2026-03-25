@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { unlockWallet } from '@/lib/storage/walletService';
+import { showError } from '@/lib/utils/toast';
 
 interface UnlockPromptProps {
   walletId: string;
@@ -28,7 +29,9 @@ export default function UnlockPrompt({ walletId, walletName, onUnlocked, onCance
       await unlockWallet(walletId, password);
       onUnlocked();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to unlock wallet');
+      const msg = e instanceof Error ? e.message : 'Failed to unlock wallet';
+      setError(msg);
+      showError(msg);
     } finally {
       setIsUnlocking(false);
     }

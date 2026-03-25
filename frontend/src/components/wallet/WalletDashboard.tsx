@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { loadWallets, deleteWalletById, resetActivity } from '@/lib/storage/walletService';
+import { showSuccess, showError } from '@/lib/utils/toast';
 import type { StoredWallet } from '@/lib/storage/indexedDB';
 import WalletList from './WalletList';
 import UnlockPrompt from './UnlockPrompt';
@@ -63,8 +64,13 @@ export default function WalletDashboard({ onCreateWallet, onImportWallet }: Wall
   };
 
   const handleDeleteWallet = async (walletId: string) => {
-    await deleteWalletById(walletId);
-    await refreshWallets();
+    try {
+      await deleteWalletById(walletId);
+      await refreshWallets();
+      showSuccess('Wallet deleted');
+    } catch {
+      showError('Failed to delete wallet');
+    }
   };
 
   const selectedWallet = wallets.find((w) => w.id === selectedWalletId);
