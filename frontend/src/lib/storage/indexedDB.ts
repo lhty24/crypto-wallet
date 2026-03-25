@@ -35,6 +35,7 @@ export interface StoredWallet {
     solana?: string;
     bitcoin?: string;
   };
+  addressesRegistered?: boolean; // true after addresses are registered with backend
 }
 
 /**

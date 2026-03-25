@@ -34,6 +34,7 @@ import {
 import { startAutoLock, stopAutoLock, resetActivity } from "./sessionManager";
 import { useWalletStore } from "../stores/walletStore";
 import type { Account } from "../types/wallet";
+import * as walletApi from "../api/wallets";
 
 // Auto-lock timeout: 5 minutes
 const AUTO_LOCK_TIMEOUT_MS = 5 * 60 * 1000;
@@ -122,8 +123,15 @@ export async function createWallet(
   // 3. Encrypt mnemonic
   const encryptedData = await encrypt(mnemonic, password);
 
-  // 4. Create wallet object and save to IndexedDB
-  const walletId = generateWalletId();
+  // 4. Register wallet metadata with backend (must succeed before local save)
+  const apiResult = await walletApi.createWallet({ name });
+  if (!apiResult.success) {
+    zeroBuffer(seed);
+    throw new Error(`Failed to register wallet with backend: ${apiResult.error}`);
+  }
+  const walletId = apiResult.data.wallet_id;
+
+  // 5. Save to IndexedDB using backend's wallet ID
   const storedWallet: StoredWallet = {
     id: walletId,
     name,
@@ -138,7 +146,7 @@ export async function createWallet(
 
   await saveWallet(storedWallet);
 
-  // 5. Update Zustand state
+  // 6. Update Zustand state
   const { actions } = useWalletStore.getState();
   actions.setWallet({
     id: walletId,
@@ -182,8 +190,15 @@ export async function importWallet(
   // Encrypt mnemonic
   const encryptedData = await encrypt(mnemonic, password);
 
-  // Create wallet object and save
-  const walletId = generateWalletId();
+  // Register imported wallet metadata with backend (must succeed before local save)
+  const apiResult = await walletApi.importWallet({ name });
+  if (!apiResult.success) {
+    zeroBuffer(seed);
+    throw new Error(`Failed to register wallet with backend: ${apiResult.error}`);
+  }
+  const walletId = apiResult.data.wallet_id;
+
+  // Save to IndexedDB using backend's wallet ID
   const storedWallet: StoredWallet = {
     id: walletId,
     name,
@@ -212,6 +227,62 @@ export async function importWallet(
   zeroBuffer(seed);
 
   return { id: walletId };
+}
+
+/**
+ * Registers wallet addresses with the backend for balance indexing.
+ *
+ * Best-effort: logs warnings on failure but never throws.
+ * Sets addressesRegistered flag in IndexedDB on full success.
+ */
+async function registerAddressesWithBackend(
+  storedWallet: StoredWallet
+): Promise<string | null> {
+  const addressEntries: { address: string; chain: string; derivation_path: string }[] = [];
+
+  if (storedWallet.addresses.ethereum) {
+    addressEntries.push({
+      address: storedWallet.addresses.ethereum,
+      chain: "ethereum",
+      derivation_path: "m/44'/60'/0'/0/0",
+    });
+  }
+  if (storedWallet.addresses.bitcoin) {
+    addressEntries.push({
+      address: storedWallet.addresses.bitcoin,
+      chain: "bitcoin",
+      derivation_path: "m/44'/0'/0'/0/0",
+    });
+  }
+  if (storedWallet.addresses.solana) {
+    addressEntries.push({
+      address: storedWallet.addresses.solana,
+      chain: "solana",
+      derivation_path: "m/44'/501'/0'/0'",
+    });
+  }
+
+  let allSucceeded = true;
+  for (const entry of addressEntries) {
+    try {
+      const result = await walletApi.registerAddress(storedWallet.id, entry);
+      if (!result.success) {
+        allSucceeded = false;
+        console.warn(`Failed to register ${entry.chain} address: ${result.error}`);
+      }
+    } catch (err) {
+      allSucceeded = false;
+      console.warn(`Failed to register ${entry.chain} address:`, err);
+    }
+  }
+
+  if (allSucceeded) {
+    // Mark addresses as registered so we don't re-register on next unlock
+    await saveWallet({ ...storedWallet, addressesRegistered: true });
+    return null;
+  }
+
+  return "Could not sync addresses with server — balances may be unavailable. Will retry on next unlock.";
 }
 
 /**
@@ -261,6 +332,14 @@ export async function unlockWallet(
     createdAt: new Date(storedWallet.createdAt).toISOString(),
   });
   actions.unlockWallet();
+
+  // 6. Register addresses with backend (best-effort, retries on next unlock)
+  if (!storedWallet.addressesRegistered) {
+    const warning = await registerAddressesWithBackend(storedWallet);
+    if (warning) {
+      actions.setWarning(warning);
+    }
+  }
 }
 
 /**
@@ -320,6 +399,16 @@ export async function deleteWalletById(walletId: string): Promise<void> {
   const state = useWalletStore.getState();
   if (state.currentWallet?.id === walletId && state.isUnlocked) {
     lockWallet();
+  }
+
+  // Delete from backend (best-effort — local deletion should always proceed)
+  try {
+    const result = await walletApi.deleteWallet(walletId);
+    if (!result.success) {
+      console.warn(`Failed to delete wallet from backend: ${result.error}`);
+    }
+  } catch (err) {
+    console.warn("Failed to delete wallet from backend:", err);
   }
 
   // Delete from IndexedDB

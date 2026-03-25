@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useWallet, useIsUnlocked, useWalletStore } from '@/lib/stores/walletStore';
+import { useWallet, useIsUnlocked, useWalletWarning, useWalletStore } from '@/lib/stores/walletStore';
 import { lockWallet } from '@/lib/storage/walletService';
 import { fetchBalancesForWallet } from '@/lib/storage/balanceService';
 import AccountCard from './AccountCard';
@@ -14,6 +14,7 @@ export default function WalletDetail({ onLocked }: WalletDetailProps) {
   const wallet = useWallet();
   const isUnlocked = useIsUnlocked();
   const balances = useWalletStore((state) => state.balances);
+  const warning = useWalletWarning();
   const [balanceLoading, setBalanceLoading] = useState(true);
 
   useEffect(() => {
@@ -66,6 +67,12 @@ export default function WalletDetail({ onLocked }: WalletDetailProps) {
           Lock Wallet
         </button>
       </div>
+
+      {warning && (
+        <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded-lg p-3">
+          <p className="text-sm text-yellow-800 dark:text-yellow-200">{warning}</p>
+        </div>
+      )}
 
       {/* Portfolio Balance Summary */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg p-5 text-white">
