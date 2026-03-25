@@ -81,7 +81,8 @@ frontend/src/
     ├── crypto/             # Mnemonic, HD wallet, encryption, secure memory cleanup
     ├── storage/            # IndexedDB persistence, session manager, wallet service orchestrator
     ├── api/                # HTTP client with ApiResult<T> pattern, wallet API functions
-    ├── stores/             # Zustand state (walletStore.ts)
+    ├── stores/             # Zustand state (walletStore.ts, toastBridge.ts)
+    ├── utils/              # Toast notifications with security sanitization
     └── types/              # Domain types (wallet.ts)
 
 backend/src/
@@ -105,6 +106,7 @@ documentations/             # Architecture design doc, implementation logs, test
 - Use `@/*` path aliases for imports (e.g., `import { useWallet } from '@/lib/stores/walletStore'`)
 - Use `ApiResult<T>` discriminated union for API responses — never throw from API calls
 - Zustand with `subscribeWithSelector` middleware; use selector hooks to prevent unnecessary re-renders
+- Use `showSuccess`/`showError`/`showWarning`/`showInfo` from `@/lib/utils/toast` for user feedback — messages are auto-sanitized to prevent sensitive data leaks
 - Tests go in `__tests__/` directories collocated with source (e.g., `lib/crypto/__tests__/mnemonic.test.ts`)
 - Test framework: Vitest with `describe`/`it`/`expect`, happy-dom environment, fake-indexeddb for storage tests
 
@@ -133,13 +135,14 @@ These are non-negotiable for a wallet codebase:
 
 ## Testing
 
-### Frontend (~243 tests)
+### Frontend (~278 tests)
 
 - **Crypto** (~67 tests): mnemonic generation/validation, encryption round-trips, HD wallet derivation for all 3 chains, secure memory cleanup
 - **Storage** (~82 tests): IndexedDB CRUD, session manager timers, wallet service lifecycle, backend integration
 - **API** (~53 tests): HTTP client error handling, wallet API function correctness
 - **Dashboard** (~8 tests): account population on unlock, lock/unlock state, wallet loading, wallet deletion
 - **Balance** (~18 tests): balance service API/mock fallback, balance formatting, AccountCard balance display
+- **Toast/Utils** (~24 tests): toast sanitization (hex keys, mnemonics, base58), toast bridge store subscriptions
 
 ### Backend
 
@@ -176,6 +179,8 @@ cd backend && cargo test test_name -- --nocapture
 | IndexedDB storage           | `frontend/src/lib/storage/indexedDB.ts`      |
 | Wallet dashboard            | `frontend/src/components/wallet/WalletDashboard.tsx` |
 | Navigation bar              | `frontend/src/components/wallet/NavBar.tsx`  |
+| Toast notifications (sanitized) | `frontend/src/lib/utils/toast.ts`        |
+| Toast-store bridge          | `frontend/src/lib/stores/toastBridge.ts`     |
 | Backend routes & middleware | `backend/src/api/server.rs`                  |
 | Backend wallet handlers     | `backend/src/api/wallet.rs`                  |
 | Database operations         | `backend/src/database/wallet.rs`             |

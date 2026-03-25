@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { createWallet } from '@/lib/storage/walletService';
+import { showSuccess, showError } from '@/lib/utils/toast';
 import { validateWalletName, validatePassword } from './validation';
 import WalletNameInput from './WalletNameInput';
 import PasswordForm from './PasswordForm';
@@ -46,7 +47,9 @@ export default function CreateWalletFlow({ onComplete, onCancel }: CreateWalletF
       setMnemonic(result.mnemonic);
       setStep('mnemonic-display');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to create wallet');
+      const msg = e instanceof Error ? e.message : 'Failed to create wallet';
+      setError(msg);
+      showError(msg);
     } finally {
       setIsCreating(false);
     }
@@ -59,6 +62,7 @@ export default function CreateWalletFlow({ onComplete, onCancel }: CreateWalletF
   const handleBackupVerified = useCallback(() => {
     setMnemonic(null);
     setStep('success');
+    showSuccess('Wallet created successfully');
   }, []);
 
   const handleBackToDisplay = useCallback(() => {
