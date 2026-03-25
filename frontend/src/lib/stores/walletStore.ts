@@ -44,6 +44,7 @@ interface WalletState {
   // UI state
   isLoading: boolean;
   error: WalletError | null;
+  warning: string | null;
   
   // Actions for state updates
   actions: {
@@ -74,6 +75,7 @@ interface WalletState {
     // UI state management
     setLoading: (loading: boolean) => void;
     setError: (error: WalletError | null) => void;
+    setWarning: (warning: string | null) => void;
   };
 }
 
@@ -126,6 +128,7 @@ export const useWalletStore = create<WalletState>()(
     transactionHistory: [],
     isLoading: false,
     error: null,
+    warning: null,
 
     // Actions
     actions: {
@@ -133,11 +136,12 @@ export const useWalletStore = create<WalletState>()(
       setWallet: (wallet: Wallet) => 
         set({ currentWallet: wallet }),
       
-      lockWallet: () => 
-        set({ 
-          isUnlocked: false, 
+      lockWallet: () =>
+        set({
+          isUnlocked: false,
           currentAccount: null,
-          error: null 
+          error: null,
+          warning: null,
         }),
       
       unlockWallet: () => 
@@ -153,6 +157,7 @@ export const useWalletStore = create<WalletState>()(
           pendingTransactions: [],
           transactionHistory: [],
           error: null,
+          warning: null,
         }),
 
       // Account management actions
@@ -229,8 +234,11 @@ export const useWalletStore = create<WalletState>()(
       setLoading: (loading: boolean) => 
         set({ isLoading: loading }),
       
-      setError: (error: WalletError | null) => 
+      setError: (error: WalletError | null) =>
         set({ error }),
+
+      setWarning: (warning: string | null) =>
+        set({ warning }),
     }
   }))
 );
@@ -265,6 +273,7 @@ export const useTransactionHistory = () =>
 // Hook for UI state
 export const useWalletLoading = () => useWalletStore((state) => state.isLoading);
 export const useWalletError = () => useWalletStore((state) => state.error);
+export const useWalletWarning = () => useWalletStore((state) => state.warning);
 
 // Hook for actions
 export const useWalletActions = () => useWalletStore((state) => state.actions);

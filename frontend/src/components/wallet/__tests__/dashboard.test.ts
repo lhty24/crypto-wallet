@@ -43,6 +43,27 @@ vi.mock('@/lib/storage/sessionManager', () => ({
   resetActivity: vi.fn(),
 }));
 
+// Mock wallet API — backend calls
+let dashboardApiCallCount = 0;
+vi.mock('@/lib/api/wallets', () => ({
+  createWallet: vi.fn(async () => ({
+    success: true,
+    data: { wallet_id: `dashboard-uuid-${++dashboardApiCallCount}`, name: "test", created_at: new Date().toISOString(), message: "created" },
+  })),
+  importWallet: vi.fn(async () => ({
+    success: true,
+    data: { wallet_id: `dashboard-uuid-${++dashboardApiCallCount}`, name: "test", created_at: new Date().toISOString(), message: "imported" },
+  })),
+  registerAddress: vi.fn(async () => ({
+    success: true,
+    data: { id: 1, wallet_id: "test", address: "test", chain: "ethereum", derivation_path: "m/44'/60'/0'/0/0", created_at: new Date().toISOString(), message: "registered" },
+  })),
+  deleteWallet: vi.fn(async () => ({
+    success: true,
+    data: { wallet_id: "test", message: "deleted", deleted: true },
+  })),
+}));
+
 // Mock IndexedDB
 const mockWallets = new Map<string, any>();
 
@@ -69,6 +90,7 @@ import { useWalletStore } from '@/lib/stores/walletStore';
 
 beforeEach(() => {
   mockWallets.clear();
+  dashboardApiCallCount = 0;
   useWalletStore.getState().actions.clearWallet();
 });
 

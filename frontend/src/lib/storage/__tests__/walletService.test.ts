@@ -39,6 +39,27 @@ vi.mock("../../crypto/secureMemory", () => ({
   zeroBuffer: vi.fn(),
 }));
 
+// Mock wallet API — backend calls
+let walletApiCallCount = 0;
+vi.mock("../../api/wallets", () => ({
+  createWallet: vi.fn(async () => ({
+    success: true,
+    data: { wallet_id: `backend-uuid-${++walletApiCallCount}`, name: "test", created_at: new Date().toISOString(), message: "created" },
+  })),
+  importWallet: vi.fn(async () => ({
+    success: true,
+    data: { wallet_id: `backend-uuid-${++walletApiCallCount}`, name: "test", created_at: new Date().toISOString(), message: "imported" },
+  })),
+  registerAddress: vi.fn(async () => ({
+    success: true,
+    data: { id: 1, wallet_id: "test", address: "test", chain: "ethereum", derivation_path: "m/44'/60'/0'/0/0", created_at: new Date().toISOString(), message: "registered" },
+  })),
+  deleteWallet: vi.fn(async () => ({
+    success: true,
+    data: { wallet_id: "test", message: "deleted", deleted: true },
+  })),
+}));
+
 // Import after mocks are set up
 import {
   createWallet,
@@ -55,6 +76,7 @@ import { saveWallet, getWallet, deleteWallet } from "../indexedDB";
 import { zeroBuffer } from "../../crypto/secureMemory";
 import { validateMnemonic } from "../../crypto/mnemonic";
 import { decrypt } from "../../crypto/encryption";
+import * as walletApi from "../../api/wallets";
 
 // Helper to reset IndexedDB
 async function resetIndexedDB(): Promise<void> {
@@ -78,6 +100,7 @@ function resetStore(): void {
     transactionHistory: [],
     isLoading: false,
     error: null,
+    warning: null,
   });
 }
 
@@ -85,6 +108,7 @@ describe("walletService", () => {
   beforeEach(async () => {
     await resetIndexedDB();
     resetStore();
+    walletApiCallCount = 0;
     vi.clearAllMocks();
   });
 
@@ -141,6 +165,45 @@ describe("walletService", () => {
 
       expect(result1.id).not.toBe(result2.id);
     });
+
+    it("calls backend API to register wallet", async () => {
+      await createWallet("My Wallet", "test-password");
+
+      expect(walletApi.createWallet).toHaveBeenCalledWith({ name: "My Wallet" });
+    });
+
+    it("uses backend wallet_id as local ID", async () => {
+      const result = await createWallet("My Wallet", "test-password");
+
+      expect(result.id).toBe("backend-uuid-1");
+      const storedWallet = await getWallet(result.id);
+      expect(storedWallet?.id).toBe("backend-uuid-1");
+    });
+
+    it("fails when backend is unreachable", async () => {
+      vi.mocked(walletApi.createWallet).mockResolvedValueOnce({
+        success: false,
+        error: "Network error",
+      });
+
+      await expect(createWallet("My Wallet", "test-password")).rejects.toThrow(
+        "Failed to register wallet with backend"
+      );
+
+      // Verify nothing was saved locally
+      const wallets = await loadWallets();
+      expect(wallets).toHaveLength(0);
+    });
+
+    it("clears seed on backend failure", async () => {
+      vi.mocked(walletApi.createWallet).mockResolvedValueOnce({
+        success: false,
+        error: "Network error",
+      });
+
+      await expect(createWallet("My Wallet", "test-password")).rejects.toThrow();
+      expect(zeroBuffer).toHaveBeenCalled();
+    });
   });
 
   describe("importWallet", () => {
@@ -182,6 +245,26 @@ describe("walletService", () => {
 
       expect(zeroBuffer).toHaveBeenCalled();
     });
+
+    it("calls backend API to register imported wallet", async () => {
+      await importWallet("Imported Wallet", validMnemonic, "password");
+
+      expect(walletApi.importWallet).toHaveBeenCalledWith({ name: "Imported Wallet" });
+    });
+
+    it("fails when backend is unreachable", async () => {
+      vi.mocked(walletApi.importWallet).mockResolvedValueOnce({
+        success: false,
+        error: "Network error",
+      });
+
+      await expect(
+        importWallet("Imported Wallet", validMnemonic, "password")
+      ).rejects.toThrow("Failed to register wallet with backend");
+
+      const wallets = await loadWallets();
+      expect(wallets).toHaveLength(0);
+    });
   });
 
   describe("unlockWallet", () => {
@@ -219,6 +302,69 @@ describe("walletService", () => {
       const state = useWalletStore.getState();
       expect(state.currentWallet?.id).toBe(walletId);
       expect(state.currentWallet?.isLocked).toBe(false);
+    });
+
+    it("registers addresses with backend on first unlock", async () => {
+      await unlockWallet(walletId, "correct-password");
+
+      expect(walletApi.registerAddress).toHaveBeenCalledTimes(3);
+      expect(walletApi.registerAddress).toHaveBeenCalledWith(
+        walletId,
+        expect.objectContaining({ chain: "ethereum" })
+      );
+      expect(walletApi.registerAddress).toHaveBeenCalledWith(
+        walletId,
+        expect.objectContaining({ chain: "bitcoin" })
+      );
+      expect(walletApi.registerAddress).toHaveBeenCalledWith(
+        walletId,
+        expect.objectContaining({ chain: "solana" })
+      );
+    });
+
+    it("skips address registration on subsequent unlocks", async () => {
+      await unlockWallet(walletId, "correct-password");
+      expect(walletApi.registerAddress).toHaveBeenCalledTimes(3);
+
+      lockWallet();
+      vi.clearAllMocks();
+
+      await unlockWallet(walletId, "correct-password");
+      expect(walletApi.registerAddress).not.toHaveBeenCalled();
+    });
+
+    it("sets warning in Zustand when address registration fails", async () => {
+      vi.mocked(walletApi.registerAddress).mockResolvedValue({
+        success: false,
+        error: "Connection refused",
+      });
+
+      await unlockWallet(walletId, "correct-password");
+
+      const state = useWalletStore.getState();
+      expect(state.isUnlocked).toBe(true);
+      expect(state.warning).toContain("Could not sync addresses");
+    });
+
+    it("retries address registration after failure on next unlock", async () => {
+      vi.mocked(walletApi.registerAddress).mockResolvedValue({
+        success: false,
+        error: "Connection refused",
+      });
+
+      await unlockWallet(walletId, "correct-password");
+      lockWallet();
+      vi.clearAllMocks();
+
+      // Restore successful mock
+      vi.mocked(walletApi.registerAddress).mockResolvedValue({
+        success: true,
+        data: { id: 1, wallet_id: walletId, address: "test", chain: "ethereum", derivation_path: "m/44'/60'/0'/0/0", created_at: new Date().toISOString(), message: "registered" },
+      });
+
+      await unlockWallet(walletId, "correct-password");
+      expect(walletApi.registerAddress).toHaveBeenCalledTimes(3);
+      expect(useWalletStore.getState().warning).toBeNull();
     });
   });
 
@@ -310,6 +456,24 @@ describe("walletService", () => {
 
     it("does not throw when deleting non-existent wallet", async () => {
       await expect(deleteWalletById("non-existent")).resolves.not.toThrow();
+    });
+
+    it("calls backend API to delete wallet", async () => {
+      await deleteWalletById(walletId);
+
+      expect(walletApi.deleteWallet).toHaveBeenCalledWith(walletId);
+    });
+
+    it("proceeds with local deletion when backend fails", async () => {
+      vi.mocked(walletApi.deleteWallet).mockResolvedValueOnce({
+        success: false,
+        error: "Network error",
+      });
+
+      await deleteWalletById(walletId);
+
+      const storedWallet = await getWallet(walletId);
+      expect(storedWallet).toBeUndefined();
     });
   });
 
