@@ -57,5 +57,6 @@ dotenv = "0.15.0"
 tokio-test = "0.4"
 tempfile = "3.8"    # For temporary file testing
 chrono = "0.4"      # For timestamp handling in tests
+http-body-util = "0.1"  # For reading response bodies in integration tests
 
 sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "chrono", "uuid"] }
