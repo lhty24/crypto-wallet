@@ -53,13 +53,15 @@ func (s *Server) setupRoutes() {
 	s.router.Get("/", s.root)
 	s.router.Get("/health", s.healthCheck)
 
-	// Wallet routes — placeholders until T3
-	s.router.Get("/wallets", notImplemented)
-	s.router.Post("/wallet/create", notImplemented)
-	s.router.Post("/wallet/import", notImplemented)
-	s.router.Put("/wallet/{id}", notImplemented)
-	s.router.Delete("/wallet/{id}", notImplemented)
-	s.router.Post("/wallet/{id}/addresses", notImplemented)
+	// Wallet endpoints
+	s.router.Get("/wallets", s.getWallets)
+	s.router.Post("/wallet/create", s.createWallet)
+	s.router.Post("/wallet/import", s.importWallet)
+	s.router.Put("/wallet/{id}", s.updateWallet)
+	s.router.Delete("/wallet/{id}", s.deleteWallet)
+	s.router.Post("/wallet/{id}/addresses", s.registerAddress)
+
+	// Blockchain endpoints — placeholders until T4
 	s.router.Get("/wallet/{id}/balance", notImplemented)
 	s.router.Get("/wallet/{id}/transactions", notImplemented)
 	s.router.Post("/wallet/{id}/broadcast", notImplemented)
@@ -103,7 +105,18 @@ func (s *Server) root(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (s *Server) healthCheck(w http.ResponseWriter, _ *http.Request) {
-	fmt.Fprint(w, "OK")
+	if err := s.db.Ping(); err != nil {
+		slog.Error("health check failed", "error", err)
+		writeJSON(w, http.StatusServiceUnavailable, HealthResponse{
+			Status:   "error",
+			Database: "disconnected",
+		})
+		return
+	}
+	writeJSON(w, http.StatusOK, HealthResponse{
+		Status:   "ok",
+		Database: "connected",
+	})
 }
 
 func notImplemented(w http.ResponseWriter, _ *http.Request) {
