@@ -39,6 +39,8 @@ func setupTestRouter(t *testing.T) (*chi.Mux, *Server) {
 	r.Put("/wallet/{id}", s.updateWallet)
 	r.Delete("/wallet/{id}", s.deleteWallet)
 	r.Post("/wallet/{id}/addresses", s.registerAddress)
+	r.Get("/wallet/{id}/balance", s.getWalletBalance)
+	r.Get("/wallet/{id}/transactions", s.getTransactionHistory)
 
 	return r, s
 }
@@ -325,5 +327,159 @@ func TestRegisterAddressWalletNotFound(t *testing.T) {
 
 	if w.Code != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d", w.Code)
+	}
+}
+
+// helper to register an address on an existing wallet.
+func registerTestAddress(t *testing.T, r *chi.Mux, walletID, address, chain, derivationPath string) {
+	t.Helper()
+	body, _ := json.Marshal(RegisterAddressRequest{
+		Address:        address,
+		Chain:          chain,
+		DerivationPath: derivationPath,
+	})
+	req := httptest.NewRequest(http.MethodPost, "/wallet/"+walletID+"/addresses", bytes.NewBuffer(body))
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("registerTestAddress: expected 200, got %d", w.Code)
+	}
+}
+
+// --- Get Wallet Balance ---
+
+func TestGetWalletBalance(t *testing.T) {
+	r, _ := setupTestRouter(t)
+	wallet := createTestWallet(t, r, "BalanceWallet")
+
+	registerTestAddress(t, r, wallet.WalletID, "0x1234567890abcdef1234567890abcdef12345678", "ethereum", "m/44'/60'/0'/0/0")
+	registerTestAddress(t, r, wallet.WalletID, "1A1z7agoat4qNLSZjBCnWnLn949eemSpRK", "bitcoin", "m/44'/0'/0'/0/0")
+
+	req := httptest.NewRequest(http.MethodGet, "/wallet/"+wallet.WalletID+"/balance", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+
+	var resp WalletBalanceResponse
+	json.NewDecoder(w.Body).Decode(&resp)
+
+	if resp.WalletID != wallet.WalletID {
+		t.Fatalf("expected wallet_id '%s', got '%s'", wallet.WalletID, resp.WalletID)
+	}
+	if len(resp.Balances) != 2 {
+		t.Fatalf("expected 2 balances, got %d", len(resp.Balances))
+	}
+
+	// Verify each balance entry
+	for _, b := range resp.Balances {
+		if b.Balance != "0.0" {
+			t.Fatalf("expected balance '0.0', got '%s'", b.Balance)
+		}
+		if b.Timestamp == "" {
+			t.Fatal("expected non-empty timestamp")
+		}
+		switch b.Chain {
+		case "ethereum":
+			if b.Symbol != "ETH" {
+				t.Fatalf("expected symbol 'ETH', got '%s'", b.Symbol)
+			}
+		case "bitcoin":
+			if b.Symbol != "BTC" {
+				t.Fatalf("expected symbol 'BTC', got '%s'", b.Symbol)
+			}
+		default:
+			t.Fatalf("unexpected chain '%s'", b.Chain)
+		}
+	}
+}
+
+func TestGetWalletBalanceNotFound(t *testing.T) {
+	r, _ := setupTestRouter(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/wallet/nonexistent/balance", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d", w.Code)
+	}
+	var resp ErrorResponse
+	json.NewDecoder(w.Body).Decode(&resp)
+	if resp.Error != "Wallet not found" {
+		t.Fatalf("expected 'Wallet not found', got '%s'", resp.Error)
+	}
+}
+
+func TestGetWalletBalanceNoAddresses(t *testing.T) {
+	r, _ := setupTestRouter(t)
+	wallet := createTestWallet(t, r, "EmptyWallet")
+
+	req := httptest.NewRequest(http.MethodGet, "/wallet/"+wallet.WalletID+"/balance", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+
+	// Verify JSON contains empty array, not null
+	var raw map[string]json.RawMessage
+	json.NewDecoder(w.Body).Decode(&raw)
+	if string(raw["balances"]) == "null" {
+		t.Fatal("expected balances to be [] not null")
+	}
+
+	var resp WalletBalanceResponse
+	json.Unmarshal(raw["balances"], &resp.Balances)
+	if len(resp.Balances) != 0 {
+		t.Fatalf("expected 0 balances, got %d", len(resp.Balances))
+	}
+}
+
+// --- Get Transaction History ---
+
+func TestGetTransactionHistory(t *testing.T) {
+	r, _ := setupTestRouter(t)
+	wallet := createTestWallet(t, r, "TxWallet")
+
+	req := httptest.NewRequest(http.MethodGet, "/wallet/"+wallet.WalletID+"/transactions", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+
+	// Verify JSON contains empty array, not null
+	var raw map[string]json.RawMessage
+	json.NewDecoder(w.Body).Decode(&raw)
+	if string(raw["transactions"]) == "null" {
+		t.Fatal("expected transactions to be [] not null")
+	}
+
+	var resp WalletTransactionResponse
+	json.Unmarshal(raw["wallet_id"], &resp.WalletID)
+	if resp.WalletID != wallet.WalletID {
+		t.Fatalf("expected wallet_id '%s', got '%s'", wallet.WalletID, resp.WalletID)
+	}
+}
+
+func TestGetTransactionHistoryNotFound(t *testing.T) {
+	r, _ := setupTestRouter(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/wallet/nonexistent/transactions", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d", w.Code)
+	}
+	var resp ErrorResponse
+	json.NewDecoder(w.Body).Decode(&resp)
+	if resp.Error != "Wallet not found" {
+		t.Fatalf("expected 'Wallet not found', got '%s'", resp.Error)
 	}
 }
