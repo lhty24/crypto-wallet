@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -254,5 +255,79 @@ func (s *Server) registerAddress(w http.ResponseWriter, r *http.Request) {
 		DerivationPath: wa.DerivationPath,
 		CreatedAt:      createdAt,
 		Message:        "Address registered successfully",
+	})
+}
+
+// --- Blockchain Handlers ---
+
+func chainToSymbol(chain string) string {
+	switch strings.ToLower(chain) {
+	case "ethereum":
+		return "ETH"
+	case "bitcoin":
+		return "BTC"
+	case "solana":
+		return "SOL"
+	default:
+		return strings.ToUpper(chain)
+	}
+}
+
+func (s *Server) getWalletBalance(w http.ResponseWriter, r *http.Request) {
+	walletID := chi.URLParam(r, "id")
+
+	wallet, err := database.GetWalletByID(s.db, walletID)
+	if err != nil {
+		slog.Error("failed to look up wallet", "error", err)
+		writeError(w, http.StatusInternalServerError, "Internal server error")
+		return
+	}
+	if wallet == nil {
+		writeError(w, http.StatusNotFound, "Wallet not found")
+		return
+	}
+
+	addresses, err := database.GetWalletAddresses(s.db, walletID)
+	if err != nil {
+		slog.Error("failed to fetch wallet addresses", "error", err)
+		writeError(w, http.StatusInternalServerError, "Internal server error")
+		return
+	}
+
+	now := time.Now().UTC().Format(time.RFC3339)
+	balances := make([]AddressBalance, len(addresses))
+	for i, addr := range addresses {
+		balances[i] = AddressBalance{
+			Address:   addr.Address,
+			Chain:     addr.Chain,
+			Balance:   "0.0",
+			Symbol:    chainToSymbol(addr.Chain),
+			Timestamp: now,
+		}
+	}
+
+	writeJSON(w, http.StatusOK, WalletBalanceResponse{
+		WalletID: walletID,
+		Balances: balances,
+	})
+}
+
+func (s *Server) getTransactionHistory(w http.ResponseWriter, r *http.Request) {
+	walletID := chi.URLParam(r, "id")
+
+	wallet, err := database.GetWalletByID(s.db, walletID)
+	if err != nil {
+		slog.Error("failed to look up wallet", "error", err)
+		writeError(w, http.StatusInternalServerError, "Internal server error")
+		return
+	}
+	if wallet == nil {
+		writeError(w, http.StatusNotFound, "Wallet not found")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, WalletTransactionResponse{
+		WalletID:     walletID,
+		Transactions: []Transaction{},
 	})
 }

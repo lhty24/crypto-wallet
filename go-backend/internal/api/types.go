@@ -45,6 +45,38 @@ type AddressResponse struct {
 	Message        string `json:"message"`
 }
 
+// --- Blockchain response types ---
+
+type AddressBalance struct {
+	Address   string `json:"address"`
+	Chain     string `json:"chain"`
+	Balance   string `json:"balance"`
+	Symbol    string `json:"symbol"`
+	Timestamp string `json:"timestamp"`
+}
+
+type WalletBalanceResponse struct {
+	WalletID string           `json:"wallet_id"`
+	Balances []AddressBalance `json:"balances"`
+}
+
+type Transaction struct {
+	Hash        string  `json:"hash"`
+	From        string  `json:"from"`
+	To          string  `json:"to"`
+	Amount      string  `json:"amount"`
+	Chain       string  `json:"chain"`
+	Symbol      string  `json:"symbol"`
+	Status      string  `json:"status"`
+	Timestamp   string  `json:"timestamp"`
+	BlockNumber *string `json:"block_number"`
+}
+
+type WalletTransactionResponse struct {
+	WalletID     string        `json:"wallet_id"`
+	Transactions []Transaction `json:"transactions"`
+}
+
 type ErrorResponse struct {
 	Error string `json:"error"`
 }

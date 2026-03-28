@@ -61,10 +61,9 @@ func (s *Server) setupRoutes() {
 	s.router.Delete("/wallet/{id}", s.deleteWallet)
 	s.router.Post("/wallet/{id}/addresses", s.registerAddress)
 
-	// Blockchain endpoints — placeholders until T4
-	s.router.Get("/wallet/{id}/balance", notImplemented)
-	s.router.Get("/wallet/{id}/transactions", notImplemented)
-	s.router.Post("/wallet/{id}/broadcast", notImplemented)
+	// Blockchain endpoints (mock data — real RPC integration in Phase 2)
+	s.router.Get("/wallet/{id}/balance", s.getWalletBalance)
+	s.router.Get("/wallet/{id}/transactions", s.getTransactionHistory)
 }
 
 // Start begins listening and serves requests with graceful shutdown.
@@ -119,8 +118,3 @@ func (s *Server) healthCheck(w http.ResponseWriter, _ *http.Request) {
 	})
 }
 
-func notImplemented(w http.ResponseWriter, _ *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusNotImplemented)
-	fmt.Fprint(w, `{"error":"not implemented"}`)
-}
