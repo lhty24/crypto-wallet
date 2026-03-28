@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -13,14 +14,15 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-// Server holds the router and configuration for the HTTP server.
+// Server holds the router, database, and configuration for the HTTP server.
 type Server struct {
 	router *chi.Mux
+	db     *sql.DB
 	port   string
 }
 
 // NewServer creates a Server with all routes and middleware configured.
-func NewServer() *Server {
+func NewServer(db *sql.DB) *Server {
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
@@ -28,6 +30,7 @@ func NewServer() *Server {
 
 	s := &Server{
 		router: chi.NewRouter(),
+		db:     db,
 		port:   port,
 	}
 
