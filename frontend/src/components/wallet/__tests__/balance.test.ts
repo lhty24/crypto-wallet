@@ -5,9 +5,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // ============================================================================
 
 const mockGetBalance = vi.fn();
+const mockGetEthBalance = vi.fn();
 
 vi.mock('@/lib/api/wallets', () => ({
   getBalance: (...args: unknown[]) => mockGetBalance(...args),
+}));
+
+vi.mock('@/lib/rpc/ethereum', () => ({
+  getEthBalance: (...args: unknown[]) => mockGetEthBalance(...args),
 }));
 
 // Import after mocks
@@ -84,6 +89,7 @@ const apiBalances: AddressBalance[] = [
 
 beforeEach(() => {
   mockGetBalance.mockReset();
+  mockGetEthBalance.mockReset();
   useWalletStore.getState().actions.clearWallet();
 });
 
@@ -192,27 +198,47 @@ describe('formatBalance', () => {
 // ============================================================================
 
 describe('fetchBalancesForWallet', () => {
-  it('populates store with API balances on success', async () => {
+  it('uses RPC for Ethereum accounts and API for others', async () => {
+    mockGetEthBalance.mockResolvedValue({
+      balance: '1500000000000000000',
+      formatted: '1.5',
+    });
     mockGetBalance.mockResolvedValue({
       success: true,
-      data: { wallet_id: 'w1', balances: apiBalances },
+      data: {
+        wallet_id: 'w1',
+        balances: [apiBalances[1], apiBalances[2]], // BTC, SOL
+      },
     });
 
     await fetchBalancesForWallet('w1', allAccounts);
 
     const state = useWalletStore.getState();
+    // ETH via RPC
     expect(state.balances['eth-1']).toBeDefined();
     expect(state.balances['eth-1'].nativeBalance).toBe('1.5');
-    expect(state.balances['eth-1'].formattedBalance).toBe('1.5000 ETH');
-
+    expect(state.balances['eth-1'].chain).toBe('Ethereum');
+    // BTC via backend API
     expect(state.balances['btc-1']).toBeDefined();
     expect(state.balances['btc-1'].nativeBalance).toBe('0.001');
-
+    // SOL via backend API
     expect(state.balances['sol-1']).toBeDefined();
     expect(state.balances['sol-1'].nativeBalance).toBe('10.0');
   });
 
-  it('falls back to mock balances when API fails', async () => {
+  it('falls back to mock when RPC fails for Ethereum', async () => {
+    mockGetEthBalance.mockResolvedValue(null);
+    mockGetBalance.mockResolvedValue({ success: false, error: 'fail' });
+
+    await fetchBalancesForWallet('w1', allAccounts);
+
+    const state = useWalletStore.getState();
+    expect(state.balances['eth-1'].nativeBalance).toBe('0');
+    expect(state.balances['eth-1'].formattedBalance).toBe('0.0000 ETH');
+  });
+
+  it('falls back to mock when API fails for non-Ethereum', async () => {
+    mockGetEthBalance.mockResolvedValue({ balance: '0', formatted: '0' });
     mockGetBalance.mockResolvedValue({
       success: false,
       error: 'Network error',
@@ -221,32 +247,31 @@ describe('fetchBalancesForWallet', () => {
     await fetchBalancesForWallet('w1', allAccounts);
 
     const state = useWalletStore.getState();
-    expect(state.balances['eth-1']).toBeDefined();
-    expect(state.balances['eth-1'].nativeBalance).toBe('0');
-    expect(state.balances['eth-1'].formattedBalance).toBe('0.0000 ETH');
-
     expect(state.balances['btc-1'].nativeBalance).toBe('0');
     expect(state.balances['sol-1'].nativeBalance).toBe('0');
   });
 
-  it('uses mock balance for accounts not found in API response', async () => {
-    // API only returns ETH balance, missing BTC and SOL
+  it('does not call backend API when only Ethereum accounts exist', async () => {
+    mockGetEthBalance.mockResolvedValue({ balance: '0', formatted: '0' });
+
+    await fetchBalancesForWallet('w1', [ethAccount]);
+
+    expect(mockGetBalance).not.toHaveBeenCalled();
+  });
+
+  it('does not call RPC when no Ethereum accounts exist', async () => {
     mockGetBalance.mockResolvedValue({
       success: true,
-      data: { wallet_id: 'w1', balances: [apiBalances[0]] },
+      data: { wallet_id: 'w1', balances: [apiBalances[1], apiBalances[2]] },
     });
 
-    await fetchBalancesForWallet('w1', allAccounts);
+    await fetchBalancesForWallet('w1', [btcAccount, solAccount]);
 
-    const state = useWalletStore.getState();
-    // ETH should have API data
-    expect(state.balances['eth-1'].nativeBalance).toBe('1.5');
-    // BTC and SOL should fall back to mock
-    expect(state.balances['btc-1'].nativeBalance).toBe('0');
-    expect(state.balances['sol-1'].nativeBalance).toBe('0');
+    expect(mockGetEthBalance).not.toHaveBeenCalled();
   });
 
-  it('handles empty balances array from API', async () => {
+  it('uses mock for non-Ethereum accounts not found in API response', async () => {
+    mockGetEthBalance.mockResolvedValue({ balance: '0', formatted: '0' });
     mockGetBalance.mockResolvedValue({
       success: true,
       data: { wallet_id: 'w1', balances: [] },
@@ -255,36 +280,35 @@ describe('fetchBalancesForWallet', () => {
     await fetchBalancesForWallet('w1', allAccounts);
 
     const state = useWalletStore.getState();
-    // All should fall back to mock
-    expect(state.balances['eth-1'].nativeBalance).toBe('0');
     expect(state.balances['btc-1'].nativeBalance).toBe('0');
     expect(state.balances['sol-1'].nativeBalance).toBe('0');
   });
 
-  it('matches addresses case-insensitively', async () => {
+  it('matches non-Ethereum addresses case-insensitively', async () => {
+    mockGetEthBalance.mockResolvedValue({ balance: '0', formatted: '0' });
     const lowercaseBalances: AddressBalance[] = [{
-      address: '0xabcdef1234567890abcdef1234567890abcdef12', // all lowercase
-      chain: 'ethereum',
-      balance: '2.0',
-      symbol: 'ETH',
+      address: '1a1zp1ep5qgefi2dmptftl5slmv7divfna',
+      chain: 'bitcoin',
+      balance: '0.005',
+      symbol: 'BTC',
       timestamp: '2026-03-24T00:00:00Z',
     }];
-
     mockGetBalance.mockResolvedValue({
       success: true,
       data: { wallet_id: 'w1', balances: lowercaseBalances },
     });
 
-    await fetchBalancesForWallet('w1', [ethAccount]);
+    await fetchBalancesForWallet('w1', [ethAccount, btcAccount]);
 
     const state = useWalletStore.getState();
-    expect(state.balances['eth-1'].nativeBalance).toBe('2.0');
+    expect(state.balances['btc-1'].nativeBalance).toBe('0.005');
   });
 
-  it('calls getBalance with the correct wallet ID', async () => {
+  it('calls getBalance with the correct wallet ID for non-Ethereum accounts', async () => {
+    mockGetEthBalance.mockResolvedValue({ balance: '0', formatted: '0' });
     mockGetBalance.mockResolvedValue({ success: false, error: 'fail' });
 
-    await fetchBalancesForWallet('my-wallet-id', []);
+    await fetchBalancesForWallet('my-wallet-id', allAccounts);
 
     expect(mockGetBalance).toHaveBeenCalledWith('my-wallet-id');
   });
