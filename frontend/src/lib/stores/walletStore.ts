@@ -99,7 +99,7 @@ export const useWalletStore = create<WalletState>()(
         name: 'Ethereum',
         symbol: 'ETH',
         decimals: 18,
-        rpcUrl: 'https://eth-mainnet.alchemyapi.io/v2/demo', // Demo URL
+        rpcUrl: '', // Configured via NEXT_PUBLIC_ETH_RPC_URL env var
         explorerUrl: 'https://etherscan.io',
         isTestnet: false,
       },

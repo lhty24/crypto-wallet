@@ -83,7 +83,7 @@ export default function WalletDetail({ onLocked }: WalletDetailProps) {
         ) : (
           <p className="text-lg font-semibold">No balances available</p>
         )}
-        <p className="text-xs text-blue-300 mt-2">Mock data — real balances coming in Phase 2</p>
+        <p className="text-xs text-blue-300 mt-2">Ethereum: live · Bitcoin/Solana: mock</p>
       </div>
 
       <div className="space-y-3">

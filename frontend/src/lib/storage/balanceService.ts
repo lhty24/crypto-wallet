@@ -9,6 +9,7 @@
  */
 
 import { getBalance } from '@/lib/api/wallets';
+import { getEthBalance } from '@/lib/rpc/ethereum';
 import type { AddressBalance } from '@/lib/api/types';
 import type { Account, Balance, Chain } from '@/lib/types/wallet';
 import { useWalletStore } from '@/lib/stores/walletStore';
@@ -48,24 +49,44 @@ export async function fetchBalancesForWallet(
 ): Promise<void> {
   const { setBalance } = useWalletStore.getState().actions;
 
-  const result = await getBalance(walletId);
+  const ethAccounts = accounts.filter((a) => a.chain === 'Ethereum');
+  const otherAccounts = accounts.filter((a) => a.chain !== 'Ethereum');
 
-  if (result.success && result.data?.balances?.length) {
-    // Map API balances to accounts by matching address
-    for (const account of accounts) {
-      const apiBalance = result.data.balances.find(
-        (b) => b.address.toLowerCase() === account.address.toLowerCase()
-      );
-      if (apiBalance) {
-        setBalance(account.id, mapApiBalance(apiBalance, account.id));
+  // Ethereum: direct RPC via Viem
+  await Promise.all(
+    ethAccounts.map(async (account) => {
+      const rpcBalance = await getEthBalance(account.address);
+      if (rpcBalance) {
+        setBalance(account.id, {
+          accountId: account.id,
+          chain: 'Ethereum',
+          nativeBalance: rpcBalance.formatted,
+          formattedBalance: formatBalance(rpcBalance.formatted, 'Ethereum'),
+          lastUpdated: new Date().toISOString(),
+        });
       } else {
         setBalance(account.id, getMockBalance(account));
       }
-    }
-  } else {
-    // Backend unavailable — populate with mock zeros
-    for (const account of accounts) {
-      setBalance(account.id, getMockBalance(account));
+    })
+  );
+
+  // Other chains: backend API (still mock for Bitcoin/Solana)
+  if (otherAccounts.length > 0) {
+    const result = await getBalance(walletId);
+    for (const account of otherAccounts) {
+      if (result.success && result.data?.balances?.length) {
+        const apiBalance = result.data.balances.find(
+          (b) => b.address.toLowerCase() === account.address.toLowerCase()
+        );
+        setBalance(
+          account.id,
+          apiBalance
+            ? mapApiBalance(apiBalance, account.id)
+            : getMockBalance(account)
+        );
+      } else {
+        setBalance(account.id, getMockBalance(account));
+      }
     }
   }
 }
