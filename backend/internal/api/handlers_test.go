@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/lhty24/crypto-wallet/go-backend/internal/database"
+	"github.com/lhty24/crypto-wallet/backend/internal/database"
 	_ "modernc.org/sqlite"
 )
 

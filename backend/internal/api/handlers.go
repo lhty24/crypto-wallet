@@ -10,7 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
-	"github.com/lhty24/crypto-wallet/go-backend/internal/database"
+	"github.com/lhty24/crypto-wallet/backend/internal/database"
 )
 
 // --- Helpers ---

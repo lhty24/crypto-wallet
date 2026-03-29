@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/lhty24/crypto-wallet/go-backend/internal/api"
-	"github.com/lhty24/crypto-wallet/go-backend/internal/database"
+	"github.com/lhty24/crypto-wallet/backend/internal/api"
+	"github.com/lhty24/crypto-wallet/backend/internal/database"
 )
 
 func main() {

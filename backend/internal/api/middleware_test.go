@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/lhty24/crypto-wallet/go-backend/internal/database"
+	"github.com/lhty24/crypto-wallet/backend/internal/database"
 	_ "modernc.org/sqlite"
 )
 

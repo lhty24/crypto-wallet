@@ -1,6 +1,6 @@
 # Multi-Chain Cryptocurrency Wallet
 
-A secure, non-custodial multi-chain cryptocurrency wallet built with Rust (Axum) backend and Next.js frontend. Supports Ethereum, Bitcoin, and Solana with industry-standard security practices.
+A secure, non-custodial multi-chain cryptocurrency wallet built with a Go (Chi) backend and Next.js frontend. Supports Ethereum, Bitcoin, and Solana with industry-standard security practices.
 
 ## Features
 
@@ -9,7 +9,7 @@ A secure, non-custodial multi-chain cryptocurrency wallet built with Rust (Axum)
 - **Non-Custodial** - Private keys never leave your device; all encryption happens client-side
 - **Secure Storage** - AES-256-GCM encryption with Argon2 key derivation
 - **Multi-Account** - Derive unlimited accounts from a single mnemonic
-- **Modern Stack** - Rust backend for memory safety, Next.js 16 + React 19 frontend
+- **Modern Stack** - Go backend for simplicity and fast iteration, Next.js 16 + React 19 frontend
 
 ## Architecture
 
@@ -28,11 +28,11 @@ A secure, non-custodial multi-chain cryptocurrency wallet built with Rust (Axum)
 └───────────────────────────────┼─────────────────────────────────┘
                                 │ HTTP API (Metadata Only)
 ┌───────────────────────────────┼─────────────────────────────────┐
-│                        BACKEND (Rust/Axum)                      │
+│                         BACKEND (Go/Chi)                        │
 │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  │
 │  │ REST API        │  │ Services        │  │ Database        │  │
 │  │ - /wallets      │  │ - Balance Check │  │ - SQLite        │  │
-│  │ - /addresses    │  │ - TX Broadcast  │  │ - Wallet Meta   │  │
+│  │ - /addresses    │  │ - TX History    │  │ - Wallet Meta   │  │
 │  │ - /health       │  │ - Gas Estimate  │  │ - Addresses     │  │
 │  └─────────────────┘  └─────────────────┘  └─────────────────┘  │
 │                                                                 │
@@ -65,14 +65,13 @@ This wallet follows a **true non-custodial architecture**:
 
 ## Tech Stack
 
-### Backend (Rust)
+### Backend (Go)
 
-| Category  | Technology                   |
-| --------- | ---------------------------- |
-| Framework | Axum 0.8                     |
-| Runtime   | Tokio (async)                |
-| Database  | SQLite + sqlx                |
-| Logging   | tracing + tracing-subscriber |
+| Category  | Technology              |
+| --------- | ----------------------- |
+| Framework | Chi 5 (HTTP router)     |
+| Database  | SQLite (modernc.org)    |
+| Logging   | slog (structured)       |
 
 > **Note:** Backend handles metadata only. All cryptographic operations (mnemonic, encryption, signing) are performed client-side.
 
@@ -91,7 +90,7 @@ This wallet follows a **true non-custodial architecture**:
 
 ### Prerequisites
 
-- Rust 1.70+ ([rustup](https://rustup.rs/))
+- Go 1.23+ ([go.dev](https://go.dev/dl/))
 - Node.js 18+ ([nodejs.org](https://nodejs.org/))
 - Git
 
@@ -104,7 +103,7 @@ cd crypto-wallet
 
 # Backend setup
 cd backend
-cargo build
+go build ./cmd/server
 
 # Frontend setup
 cd ../frontend
@@ -117,7 +116,7 @@ npm install
 
 ```bash
 cd backend
-DATABASE_URL="sqlite://./data/wallet.db" cargo run
+go run ./cmd/server
 # Server starts on http://localhost:8080
 ```
 
@@ -131,10 +130,10 @@ npm run dev
 
 ### Environment Variables
 
-**Backend** (required):
+**Backend**:
 
 ```bash
-DATABASE_URL="sqlite://./data/wallet.db"  # SQLite database path
+DATABASE_URL="sqlite://./data/wallet.db"  # SQLite database path (default)
 PORT=8080                                  # Server port (default: 8080)
 ```
 
@@ -164,7 +163,6 @@ DELETE /wallet/{id}                # Delete wallet
 POST   /wallet/{id}/addresses      # Register derived addresses
 GET    /wallet/{id}/balance        # Get wallet balances
 GET    /wallet/{id}/transactions   # Get transaction history
-POST   /wallet/{id}/broadcast      # Broadcast signed transaction
 ```
 
 ### Request/Response Examples
@@ -205,22 +203,22 @@ curl -X POST http://localhost:8080/wallet/{wallet_id}/addresses \
 
 ```
 crypto-wallet/
-├── backend/                    # Rust backend (metadata only)
-│   ├── src/
-│   │   ├── main.rs            # Entry point, server setup
-│   │   ├── lib.rs             # Library exports
-│   │   ├── api/               # REST endpoints
-│   │   │   ├── mod.rs
-│   │   │   ├── server.rs      # Axum server config
-│   │   │   ├── types.rs       # Request/response types
-│   │   │   └── wallet.rs      # Wallet CRUD endpoints
+├── backend/                 # Go backend (metadata only)
+│   ├── cmd/server/main.go      # Entry point
+│   ├── internal/
+│   │   ├── api/                # REST endpoints
+│   │   │   ├── handlers.go    # Request handlers
+│   │   │   ├── middleware.go  # CORS, security headers, auth
+│   │   │   ├── server.go     # Chi router config
+│   │   │   └── types.go      # Request/response types
 │   │   └── database/          # SQLite persistence
-│   │       ├── mod.rs
-│   │       ├── connection.rs  # Database pool
-│   │       ├── models.rs      # Data models
-│   │       ├── wallet.rs      # Wallet CRUD
-│   │       └── wallet_address.rs # Address CRUD
-│   └── Cargo.toml
+│   │       ├── connection.go  # Database pool
+│   │       ├── migration.go   # Schema migrations
+│   │       ├── models.go      # Data models
+│   │       ├── wallet.go      # Wallet CRUD
+│   │       └── wallet_address.go # Address CRUD
+│   ├── go.mod
+│   └── go.sum
 ├── frontend/                   # Next.js frontend
 │   ├── src/
 │   │   ├── app/               # Next.js pages
@@ -245,10 +243,10 @@ crypto-wallet/
 ### Running Tests
 
 ```bash
-# Backend tests
-cd backend && cargo test
+# Backend tests (44 tests)
+cd backend && go test ./...
 
-# Frontend tests (Vitest, ~190 tests)
+# Frontend tests (Vitest, ~278 tests)
 cd frontend && npm run test:run
 
 # Frontend — specific file
@@ -258,10 +256,6 @@ cd frontend && npx vitest run src/lib/crypto/__tests__/mnemonic.test.ts
 ### Security Auditing
 
 ```bash
-# Audit Rust dependencies
-cd backend
-cargo audit
-
 # Audit npm dependencies
 cd frontend
 npm audit
@@ -272,7 +266,7 @@ npm audit
 ```bash
 # Backend
 cd backend
-cargo build --release
+go build -o server ./cmd/server
 
 # Frontend
 cd frontend
@@ -315,7 +309,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [BIP32](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki) - HD wallet specification
 - [BIP44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki) - Multi-account hierarchy
 - [Viem](https://viem.sh/) - Modern Ethereum library
-- [Axum](https://github.com/tokio-rs/axum) - Rust web framework
+- [Chi](https://github.com/go-chi/chi) - Go HTTP router
 
 ---
 
