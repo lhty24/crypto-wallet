@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Non-custodial multi-chain cryptocurrency wallet supporting Bitcoin, Ethereum, and Solana. The frontend (Next.js 16, React 19, TypeScript) handles all cryptographic operations — mnemonic generation, key derivation, transaction signing — while the backend (currently Rust/Axum, migrating to Go in Phase 1.5) stores only public metadata (wallet names, addresses, timestamps). Private keys and mnemonics never leave the client.
+Non-custodial multi-chain cryptocurrency wallet supporting Bitcoin, Ethereum, and Solana. The frontend (Next.js 16, React 19, TypeScript) handles all cryptographic operations — mnemonic generation, key derivation, transaction signing — while the backend (Go/Chi) stores only public metadata (wallet names, addresses, timestamps). Private keys and mnemonics never leave the client.
 
 For task breakdowns and roadmap, see the Development Roadmap section in `documentations/Crypto-Wallet-Design-Doc.md`.
 For architecture details, see `documentations/Crypto-Wallet-Design-Doc.md`.
@@ -25,10 +25,9 @@ npm test             # Watch mode
 
 ```bash
 cd backend
-cargo build                  # Debug build
-cargo run                    # Start server at http://localhost:8080
-cargo test                   # Run all tests
-cargo build --release        # Optimized build (LTO, opt-level=3)
+go build ./cmd/server        # Build
+go run ./cmd/server          # Start server at http://localhost:8080
+go test ./...                # Run all tests
 ```
 
 ### Environment Variables
@@ -37,7 +36,6 @@ cargo build --release        # Optimized build (LTO, opt-level=3)
 | --------------------- | -------- | --------------------------- | -------------------- |
 | `DATABASE_URL`        | Backend  | `sqlite://./data/wallet.db` | SQLite database path |
 | `PORT`                | Backend  | `8080`                      | Server port          |
-| `RUST_LOG`            | Backend  | `info`                      | Log level            |
 | `NEXT_PUBLIC_API_URL` | Frontend | `http://localhost:8080`     | Backend API URL      |
 
 ## Architecture
@@ -85,10 +83,11 @@ frontend/src/
     ├── utils/              # Toast notifications with security sanitization
     └── types/              # Domain types (wallet.ts)
 
-backend/src/
-├── api/                    # Axum server setup, wallet handlers, request/response types
-├── database/               # SQLite via sqlx — connection pool, models, CRUD operations
-└── main.rs / lib.rs        # Entry point, module declarations
+backend/
+├── cmd/server/main.go      # Entry point
+└── internal/
+    ├── api/                # Chi router, handlers, middleware, request/response types
+    └── database/           # SQLite via modernc.org/sqlite — connection, models, CRUD
 
 documentations/             # Architecture design doc, implementation logs, testing guides
 ```
@@ -99,7 +98,7 @@ documentations/             # Architecture design doc, implementation logs, test
 
 - **Naming**: camelCase (variables/functions), PascalCase (types/components), UPPER_SNAKE_CASE (constants)
 - **Commit messages**: Conventional prefixes — `feat:`, `fix:`, `chore:`, `refactor:` with task references (e.g., `P1-FE-T4`)
-- **API types**: snake_case fields (matching Rust serde serialization)
+- **API types**: snake_case fields (matching Go JSON tags)
 
 ### Frontend (TypeScript)
 
@@ -110,14 +109,12 @@ documentations/             # Architecture design doc, implementation logs, test
 - Tests go in `__tests__/` directories collocated with source (e.g., `lib/crypto/__tests__/mnemonic.test.ts`)
 - Test framework: Vitest with `describe`/`it`/`expect`, happy-dom environment, fake-indexeddb for storage tests
 
-### Backend (Rust — migrating to Go in Phase 1.5)
+### Backend (Go)
 
-> These conventions apply to the current Rust backend until the Go migration is complete.
-
-- Error handling: `anyhow::Result<T>` with `.context()` for propagation; map to HTTP status codes in handlers
-- Logging: `tracing` crate — `tracing::info!`, `tracing::error!` etc.
-- Handler signature pattern: `async fn(State(pool): State<DbPool>, ...) -> Result<Json<T>, StatusCode>`
-- SQLx compile-time checked queries with `#[derive(sqlx::FromRow)]`
+- Error handling: return `(T, error)` tuples; map to JSON `{"error": "..."}` responses with appropriate HTTP status codes in handlers
+- Logging: `slog` structured logger — `slog.Info()`, `slog.Error()` etc.
+- Handler signature pattern: `func(w http.ResponseWriter, r *http.Request)` with Chi router context for URL params
+- Database: `database/sql` with `modernc.org/sqlite` driver, manual query building
 
 ## Security Rules
 
@@ -144,10 +141,11 @@ These are non-negotiable for a wallet codebase:
 - **Balance** (~18 tests): balance service API/mock fallback, balance formatting, AccountCard balance display
 - **Toast/Utils** (~24 tests): toast sanitization (hex keys, mnemonics, base58), toast bridge store subscriptions
 
-### Backend
+### Backend (~44 tests)
 
-- API tests: endpoint validation, error responses
-- Database tests: CRUD operations, foreign key cascades
+- **Handler tests** (~21 tests): endpoint validation, CRUD operations, error responses
+- **Middleware tests** (~13 tests): security headers, CORS, custom header enforcement, JSON error format
+- **Database tests** (~10 tests): CRUD operations, foreign key cascades
 
 ### Running Tests
 
@@ -159,10 +157,10 @@ cd frontend && npm run test:run
 cd frontend && npx vitest run src/lib/crypto/__tests__/mnemonic.test.ts
 
 # Backend — all tests
-cd backend && cargo test
+cd backend && go test ./...
 
-# Backend — specific test
-cd backend && cargo test test_name -- --nocapture
+# Backend — verbose
+cd backend && go test ./... -v
 ```
 
 ## Key Files Reference
@@ -181,7 +179,8 @@ cd backend && cargo test test_name -- --nocapture
 | Navigation bar              | `frontend/src/components/wallet/NavBar.tsx`  |
 | Toast notifications (sanitized) | `frontend/src/lib/utils/toast.ts`        |
 | Toast-store bridge          | `frontend/src/lib/stores/toastBridge.ts`     |
-| Backend routes & middleware | `backend/src/api/server.rs`                  |
-| Backend wallet handlers     | `backend/src/api/wallet.rs`                  |
-| Database operations         | `backend/src/database/wallet.rs`             |
+| Backend routes & middleware | `backend/internal/api/server.go`          |
+| Backend handlers            | `backend/internal/api/handlers.go`        |
+| Backend middleware          | `backend/internal/api/middleware.go`       |
+| Database operations         | `backend/internal/database/wallet.go`     |
 | Architecture design doc     | `documentations/Crypto-Wallet-Design-Doc.md` |

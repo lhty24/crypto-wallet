@@ -321,3 +321,6 @@ target/clippy/
 #
 # Remember: Once committed to git, files can be difficult to completely remove
 # from git history. Prevention is better than remediation.
+
+# Go build artifacts
+backend/server

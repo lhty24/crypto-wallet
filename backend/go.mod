@@ -1,4 +1,4 @@
-module github.com/lhty24/crypto-wallet/go-backend
+module github.com/lhty24/crypto-wallet/backend
 
 go 1.26.1
 
