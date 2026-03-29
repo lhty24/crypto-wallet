@@ -94,6 +94,10 @@ out/
 # DEVELOPMENT TOOLS
 # =============================================================================
 
+# Claude Code
+.claude/
+CLAUDE.md
+
 # IDE and Editor files
 .vscode/settings.json
 .vscode/launch.json
@@ -287,6 +291,7 @@ target/clippy/
 !SECURITY.md
 !CONTRIBUTING.md
 !*.md
+CLAUDE.md
 
 # Include source code files (may match security globs like *mnemonic*)
 !*.ts
