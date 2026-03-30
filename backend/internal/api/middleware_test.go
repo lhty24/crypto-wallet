@@ -29,7 +29,7 @@ func setupFullServer(t *testing.T) *Server {
 	}
 	t.Cleanup(func() { db.Close() })
 
-	return NewServer(db)
+	return NewServer(db, nil, 0)
 }
 
 // serve sends a request through the full middleware stack and returns the recorder.

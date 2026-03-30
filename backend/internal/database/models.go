@@ -19,3 +19,21 @@ type WalletAddress struct {
 	DerivationPath string  `json:"derivation_path"`
 	CreatedAt      *string `json:"created_at"`
 }
+
+// TransactionRecord represents a cached blockchain transaction from a block explorer.
+type TransactionRecord struct {
+	ID          *int64  `json:"id"`
+	WalletID    string  `json:"wallet_id"`
+	Address     string  `json:"address"`
+	Hash        string  `json:"hash"`
+	From        string  `json:"from_address"`
+	To          string  `json:"to_address"`
+	Amount      string  `json:"amount"`
+	Chain       string  `json:"chain"`
+	Symbol      string  `json:"symbol"`
+	Status      string  `json:"status"`
+	Timestamp   string  `json:"timestamp"`
+	BlockNumber *string `json:"block_number"`
+	CreatedAt   string  `json:"created_at"`
+	CachedAt    string  `json:"cached_at"`
+}

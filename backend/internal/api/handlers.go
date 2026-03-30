@@ -326,8 +326,104 @@ func (s *Server) getTransactionHistory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Optional query params
+	chainFilter := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("chain")))
+	forceRefresh := r.URL.Query().Get("force_refresh") == "true"
+
+	// Validate chain filter if provided
+	if chainFilter != "" {
+		if _, errMsg := validateChain(chainFilter); errMsg != "" {
+			writeError(w, http.StatusBadRequest, errMsg)
+			return
+		}
+	}
+
+	addresses, err := database.GetWalletAddresses(s.db, walletID)
+	if err != nil {
+		slog.Error("failed to fetch wallet addresses", "error", err)
+		writeError(w, http.StatusInternalServerError, "Internal server error")
+		return
+	}
+
+	// Fetch fresh data from block explorer for stale addresses
+	if s.explorer != nil {
+		for _, addr := range addresses {
+			// Apply chain filter
+			if chainFilter != "" && addr.Chain != chainFilter {
+				continue
+			}
+
+			// Only Ethereum is supported for now
+			if addr.Chain != "ethereum" {
+				continue
+			}
+
+			needsFetch := forceRefresh
+			if !needsFetch {
+				cachedAt, err := database.GetCacheTimestamp(s.db, addr.Address, addr.Chain)
+				if err != nil {
+					slog.Error("failed to check cache timestamp", "error", err, "address", addr.Address)
+					continue
+				}
+				if cachedAt == nil {
+					needsFetch = true
+				} else {
+					t, err := time.Parse(time.RFC3339, *cachedAt)
+					if err != nil || time.Since(t) > s.cacheDuration {
+						needsFetch = true
+					}
+				}
+			}
+
+			if needsFetch {
+				txs, err := s.explorer.FetchTransactions(walletID, addr.Address)
+				if err != nil {
+					slog.Warn("block explorer fetch failed, using cache", "error", err, "address", addr.Address)
+					continue
+				}
+				inserted, err := database.UpsertTransactions(s.db, txs)
+				if err != nil {
+					slog.Error("failed to cache transactions", "error", err, "address", addr.Address)
+				} else if inserted > 0 {
+					slog.Info("cached new transactions", "address", addr.Address, "count", inserted)
+				}
+				// Update cache timestamp even if no new txs, so we don't re-fetch immediately
+				if err := database.UpdateCacheTimestamp(s.db, addr.Address, addr.Chain); err != nil {
+					slog.Error("failed to update cache timestamp", "error", err, "address", addr.Address)
+				}
+			}
+		}
+	}
+
+	// Return cached transactions
+	records, err := database.GetTransactionsByWalletID(s.db, walletID)
+	if err != nil {
+		slog.Error("failed to fetch transactions", "error", err)
+		writeError(w, http.StatusInternalServerError, "Internal server error")
+		return
+	}
+
+	// Apply chain filter to results
+	txs := make([]Transaction, 0, len(records))
+	for _, rec := range records {
+		if chainFilter != "" && rec.Chain != chainFilter {
+			continue
+		}
+		txs = append(txs, Transaction{
+			Hash:        rec.Hash,
+			From:        rec.From,
+			To:          rec.To,
+			Amount:      rec.Amount,
+			Chain:       rec.Chain,
+			Symbol:      rec.Symbol,
+			Status:      rec.Status,
+			Timestamp:   rec.Timestamp,
+			BlockNumber: rec.BlockNumber,
+		})
+	}
+
 	writeJSON(w, http.StatusOK, WalletTransactionResponse{
 		WalletID:     walletID,
-		Transactions: []Transaction{},
+		Transactions: txs,
 	})
 }

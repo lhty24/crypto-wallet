@@ -12,26 +12,32 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+
+	"github.com/lhty24/crypto-wallet/backend/internal/service"
 )
 
 // Server holds the router, database, and configuration for the HTTP server.
 type Server struct {
-	router *chi.Mux
-	db     *sql.DB
-	port   string
+	router        *chi.Mux
+	db            *sql.DB
+	port          string
+	explorer      service.BlockExplorer
+	cacheDuration time.Duration
 }
 
 // NewServer creates a Server with all routes and middleware configured.
-func NewServer(db *sql.DB) *Server {
+func NewServer(db *sql.DB, explorer service.BlockExplorer, cacheDuration time.Duration) *Server {
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
 
 	s := &Server{
-		router: chi.NewRouter(),
-		db:     db,
-		port:   port,
+		router:        chi.NewRouter(),
+		db:            db,
+		port:          port,
+		explorer:      explorer,
+		cacheDuration: cacheDuration,
 	}
 
 	s.setupMiddleware()
@@ -61,7 +67,7 @@ func (s *Server) setupRoutes() {
 	s.router.Delete("/wallet/{id}", s.deleteWallet)
 	s.router.Post("/wallet/{id}/addresses", s.registerAddress)
 
-	// Blockchain endpoints (mock data — real RPC integration in Phase 2)
+	// Blockchain endpoints
 	s.router.Get("/wallet/{id}/balance", s.getWalletBalance)
 	s.router.Get("/wallet/{id}/transactions", s.getTransactionHistory)
 }
